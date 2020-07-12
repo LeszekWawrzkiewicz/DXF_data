@@ -3,7 +3,7 @@ import time
 start = time.time()
 path = r"C:\Users\Hp\Desktop\elewacja.dxf"
 import dxfgrabber
-import pickle
+from operator import itemgetter
 
 
 def export_data(shape_name, block_name, block_points):
@@ -24,15 +24,27 @@ def export_data_X_Y(block_points):
 
 def module_size(temp_size):
     temp_data_size = []
-    calc_data = abs(temp_size[0][0] - temp_size[1][0])
+    calc_data = int(abs(temp_size[0][0] - temp_size[2][0]))
     temp_data_size.append(calc_data)
-    calc_data = abs(temp_size[0][1] - temp_size[3][1])
+    calc_data = int(abs(temp_size[0][1] - temp_size[2][1]))
     temp_data_size.append(calc_data)
     return temp_data_size
 
 
-# defines your dxf object
 dxf = dxfgrabber.readfile(path)
+temp_code_W_H_total = []
+for blocks in dxf.blocks:
+    if blocks.name:
+        for elements in blocks:
+            temp_code_W_H = {}
+            if elements.dxftype == "LWPOLYLINE":
+                temp_code_W_H['code'] = blocks.name
+                temp_code_W_H['B'] = module_size(elements.points)[0]
+                temp_code_W_H['H'] = module_size(elements.points)[1]
+                temp_code_W_H_total.append(temp_code_W_H)
+print(str(temp_code_W_H_total))
+# defines your dxf object
+
 level_temp_data = {}
 elevation_temp_data = {}
 # print(dxf.entities)
@@ -44,32 +56,48 @@ for entity in dxf.entities:
         if entity.raw_text[1] == "P":
             level_temp_data[int(entity.insert[1])] = entity.raw_text.replace("{", "").replace("}", "")
 
-# print(level_temp_data)
-# print(elevation_temp_data)
-# print()
-# print(level_temp_data)
-# print(temp_data)
 left_border = 3000
 right_border = 12000
 dict_module_coordinate = {}
 list_module_coordinate = []
-print(elevation_temp_data)
+temp_global_list = []
+temp_local_list = ()
+
+# print(elevation_temp_data)
+file_X_Y = open('temp_global_list.txt', 'w')
 for entity in dxf.entities:
     if entity.dxftype == "INSERT":
         x_coordinate = int(entity.insert[0])
         y_coordinate = int(entity.insert[1])
-        if "BL." in entity.name:
+        if type(entity.name):
             dict_module_coordinate = {}
             dict_module_coordinate['name'] = entity.name
             dict_module_coordinate['X'] = x_coordinate
             dict_module_coordinate['Y'] = y_coordinate
-            dict_module_coordinate['level'] = ''
-            dict_module_coordinate['elev'] = ''
-            for k_b, v_b in elevation_temp_data.items():
-                if dict_module_coordinate['X'] in range(k_b - left_border, k_b + right_border):
-                    dict_module_coordinate['elev'] = v_b.replace("{", "").replace("}", "")
-                    list_module_coordinate.append(dict_module_coordinate)
+            x = list(filter(lambda W_data: W_data['code'] == entity.name, temp_code_W_H_total))[0]['B']
+            dict_module_coordinate['X_R'] = x
+            temp_local_list = (entity.name, x_coordinate, x_coordinate)
+            temp_global_list.append(dict_module_coordinate)
+            file_X_Y.write(str(temp_local_list))
+            temp_local_list = ()
 
+            # for k_b, v_b in elevation_temp_data.items():
+#               if dict_module_coordinate['X'] in range(k_b - left_border, k_b + right_border):
+#                   dict_module_coordinate['elev'] = v_b.replace("{", "").replace("}", "")
+#                  list_module_coordinate.append(dict_module_coordinate)
+#
+file_X_Y.close()
+
+sorted_list = sorted(temp_global_list, key=itemgetter("X", "Y"))
+
+# with open('temp_global_list_total.txt', 'w') as file_X_Y:
+#    file_X_Y.write(str(sorted_list))
+file_X_Y = open('temp_global_list_total.txt', 'w')
+for i in sorted_list:
+    file_X_Y.write(f"{str(i)}\n")
+file_X_Y.close()
+# with open('temp_global_list.txt','w') as file_X_Y:
+#    file_X_Y.write(str(temp_global_list))
 # with open('file_data_X_Y.txt','wb') as file_X_Y:
 #    file_X_Y.write(pickle.dumps(list_module_coordinate())
 # print("ok")
