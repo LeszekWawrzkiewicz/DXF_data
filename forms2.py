@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter.filedialog import askopenfilename
 import time
+from tkinter import messagebox
 import dxfgrabber
 from operator import itemgetter
 
@@ -21,29 +22,14 @@ clicked2.set(second_text_value[0])
 
 def button_add():
     global file_path
-    file = askopenfilename(filetypes=[("DXF files","*.dxf")])
+    file = askopenfilename(filetypes=[("DXF files", "*.dxf")])
     file_path = file
+    if file_path != "":
+        messagebox.showinfo("File path added successfully", "File path added successfully")
+        button_add["state"] = "disabled"
+    else:
+        messagebox.showwarning("You must add your DXF file!", "You must add your DXF file!")
 
-def entry3_not_allowed(action_code):
-    global entry3_allowed
-    if action_code == '0':
-        return True
-    else:
-        if entry3_allowed == True:
-            entry3_allowed = False
-            return True
-        else:
-            return False
-def entry4_not_allowed(action_code):
-    global entry4_allowed
-    if action_code == '0':
-        return True
-    else:
-        if entry4_allowed == True:
-            entry4_allowed = False
-            return True
-        else:
-            return False
 
 def entry5_not_allowed(action_code):
     global entry5_allowed
@@ -56,8 +42,64 @@ def entry5_not_allowed(action_code):
         else:
             return False
 
+def button_add_elev():
+    global first_text_value
+    global ElevDrop
+    global clicked
+    add_elevation = e1.get()
+    good_to_go = False
+    if add_elevation != "":
+        for char in add_elevation:
+            if char.isalnum():
+                good_to_go = True
+    if good_to_go ==False:
+        messagebox.showwarning("Incorrect text value!", "Your text value must be at least 1 character long string with"
+                                                        "one alphanumerical character ")
+    elif first_text_value == ["Enter-any-value"] and good_to_go==True:
+        first_text_value = []
+        first_text_value.append(add_elevation)
+        clicked.set(first_text_value[0])
+        ElevDrop.grid_forget()
+        ElevDrop = OptionMenu(root, clicked, *first_text_value)
+        ElevDrop.grid(row=1, column=1, sticky=W + E)
+        messagebox.showinfo("Added first text value successfully", f"Added *{add_elevation}* successfully. You can add more than one value")
+    elif first_text_value != ["Enter-any-value"] and good_to_go == True:
+        first_text_value.append(add_elevation)
+        ElevDrop.grid_forget()
+        ElevDrop = OptionMenu(root, clicked, *first_text_value)
+        ElevDrop.grid(row=1, column=1, sticky=W + E)
+        messagebox.showinfo("Added first text value successfully",f"Added {add_elevation} successfully. You can add more values")
 
 
+def button_add_floor():
+    global second_text_value
+    global FlorDrop
+    global clicked2
+    add_floor = e2.get()
+    good_to_go = False
+    if add_floor != "":
+        for char in add_floor:
+            if char.isalnum():
+                good_to_go = True
+    if good_to_go == False:
+        messagebox.showwarning("Incorrect text value!", "Your text value must be at least 1 character long string with"
+                                                        "one alphanumerical character ")
+    elif second_text_value == ["Enter-any-value"] and good_to_go == True:
+        second_text_value = []
+        second_text_value.append(add_floor)
+        clicked2.set(second_text_value[0])
+        FlorDrop.grid_forget()
+        FlorDrop = OptionMenu(root, clicked2, *second_text_value)
+        FlorDrop.grid(row=4, column=1, sticky=W + E)
+        messagebox.showinfo("Added second text value successfully",
+                            f"Added *{add_floor}* successfully. You can add more than one value")
+    elif second_text_value != ["Enter-any-value"] and good_to_go == True:
+        second_text_value.append(add_floor)
+        FlorDrop.grid_forget()
+        FlorDrop = OptionMenu(root, clicked2, *second_text_value)
+        FlorDrop.grid(row=4, column=1, sticky=W + E)
+        messagebox.showinfo("Added second text value successfully",
+                            f"Added {add_floor} successfully. You can add more values")
 
 def button_go():
     global first_text_value
@@ -73,14 +115,11 @@ def button_go():
 
     first_text_value = e1.get()
     second_text_value = e2.get()
-    e3.delete(0, END)
-    e3.insert(0, str(first_text_value))
-    e4.delete(0, END)
-    e4.insert(0, str(second_text_value))
+
     e5.delete(0, END)
     e5.insert(0, str(file_path))
 
-    if first_text_value != "" and second_text_value != "" and file_path != "":
+    if first_text_value != ["Enter-any-value"] and second_text_value != ["Enter-any-value"] and file_path != "":
         button_start["state"] = "normal"
 
 def button_start():
@@ -220,7 +259,7 @@ def button_start():
                 file.write(export_data("LINE", blocks.name, temp_x_y))
     file.close()
     end = time.time()
-    print(end - start)
+    messagebox.showinfo("Operation run successfully", f"Operation run successfully in {int(end-start)} seconds")
 
 
 myLabel1 = Label(root, text="Enter first text value:", anchor="w",justify=LEFT)
@@ -247,9 +286,9 @@ ElevDrop = OptionMenu(root, clicked, *first_text_value)
 ElevDrop.grid(row=1, column=1, sticky=W+E)
 FlorDrop = OptionMenu(root, clicked2, *second_text_value)
 FlorDrop.grid(row=4, column=1, sticky=W+E)
-button_add_elev = Button(root, text='Add first text values')
+button_add_elev = Button(root, text='Add first text values', command=button_add_elev)
 button_add_elev.grid(row=2, column=0, columnspan=2, sticky=W+E)
-button_add_flor = Button(root, text='Add second text values')
+button_add_flor = Button(root, text='Add second text values', command=button_add_floor)
 button_add_flor.grid(row=6, column=0, columnspan=2, sticky=W+E)
 e2.grid(row=4, column=0)
 myLabel3.grid(row=7, column=0, sticky=W+E)
@@ -265,11 +304,9 @@ e5.grid(row=8, column=1)
 button_go.grid(row=10, column=0, columnspan=2, sticky=W+E)
 button_start.grid(row=11, column=0, columnspan=2, sticky=W+E)
 
-reg= root.register(entry3_not_allowed)
-reg2= root.register(entry4_not_allowed)
+
 reg3= root.register(entry5_not_allowed)
-e3.config(validate='key', validatecommand=(reg, '%d'))
-e4.config(validate='key', validatecommand=(reg2, '%d'))
+
 e5.config(validate='key', validatecommand=(reg3, '%d'))
 
 
