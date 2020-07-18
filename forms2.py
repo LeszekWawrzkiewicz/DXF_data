@@ -22,11 +22,15 @@ clicked2.set(second_text_value[0])
 
 def button_add():
     global file_path
+    global status_path
     file = askopenfilename(filetypes=[("DXF files", "*.dxf")])
     file_path = file
     if file_path != "":
         messagebox.showinfo("File path added successfully", "File path added successfully")
         button_add["state"] = "disabled"
+        status_path.grid_forget()
+        status_path = Label(root, text="Ready to load!", fg="dark orange", anchor="w",justify=LEFT)
+        status_path.grid(row=6, column=2, sticky=W+E)
     else:
         messagebox.showwarning("You must add your DXF file!", "You must add your DXF file!")
 
@@ -46,6 +50,7 @@ def button_add_elev():
     global first_text_value
     global ElevDrop
     global clicked
+    global status_elev
     add_elevation = e1.get()
     good_to_go = False
     if add_elevation != "":
@@ -62,6 +67,9 @@ def button_add_elev():
         ElevDrop.grid_forget()
         ElevDrop = OptionMenu(root, clicked, *first_text_value)
         ElevDrop.grid(row=1, column=1, sticky=W + E)
+        status_elev.grid_forget()
+        status_elev = Label(root, text="Ready to load!", anchor="w", justify=LEFT, fg="dark orange")
+        status_elev.grid(row=2, column=2, sticky=W + E)
         messagebox.showinfo("Added first text value successfully", f"Added *{add_elevation}* successfully. You can add more than one value")
     elif first_text_value != ["Enter-any-value"] and good_to_go == True:
         first_text_value.append(add_elevation)
@@ -75,12 +83,13 @@ def button_add_floor():
     global second_text_value
     global FlorDrop
     global clicked2
+    global status_floor
     add_floor = e2.get()
     good_to_go = False
     if add_floor != "":
         for char in add_floor:
             if char.isalnum():
-                good_to_go = True
+               good_to_go = True
     if good_to_go == False:
         messagebox.showwarning("Incorrect text value!", "Your text value must be at least 1 character long string with"
                                                         "one alphanumerical character ")
@@ -91,6 +100,9 @@ def button_add_floor():
         FlorDrop.grid_forget()
         FlorDrop = OptionMenu(root, clicked2, *second_text_value)
         FlorDrop.grid(row=4, column=1, sticky=W + E)
+        status_floor.grid_forget()
+        status_floor = Label(root, text="Ready to load!", anchor="w", justify=LEFT, fg="dark orange")
+        status_floor.grid(row=4, column=2, sticky=W + E)
         messagebox.showinfo("Added second text value successfully",
                             f"Added *{add_floor}* successfully. You can add more than one value")
     elif second_text_value != ["Enter-any-value"] and good_to_go == True:
@@ -105,23 +117,47 @@ def button_go():
     global first_text_value
     global second_text_value
     global file_path
-    global entry3_allowed
-    global entry4_allowed
     global entry5_allowed
+    global status_path
+    global status_elev
+    global status_floor
+    global status_head
 
-    entry3_allowed = True
-    entry4_allowed = True
-    entry5_allowed = True
-
-    first_text_value = e1.get()
-    second_text_value = e2.get()
-
-    e5.delete(0, END)
-    e5.insert(0, str(file_path))
+    if file_path != "":
+        entry5_allowed = True
+        e5.delete(0, END)
+        e5.insert(0, str(file_path))
+        entry5_allowed = False
+        status_path.grid_forget()
+        status_path = Label(root, text="File loaded!", fg="green", anchor="w", justify=LEFT)
+        status_path.grid(row=6, column=2, sticky=W + E)
+    else:
+        status_path.grid_forget()
+        status_path = Label(root, text="Failed to load!", fg="red")
+        status_path.grid(row=6, column=2, sticky=W + E)
+    if first_text_value != ["Enter-any-value"]:
+        status_elev.grid_forget()
+        status_elev = Label(root, text="Elevation loaded!", anchor="w", justify=LEFT, fg="green")
+        status_elev.grid(row=2, column=2, sticky=W + E)
+    else:
+        status_elev.grid_forget()
+        status_elev = Label(root, text="Failed to load!", anchor="w", justify=LEFT, fg="red")
+        status_elev.grid(row=2, column=2, sticky=W + E)
+    if second_text_value != ["Enter-any-value"]:
+        status_floor.grid_forget()
+        status_floor = Label(root, text="Floors loaded!", anchor="w", justify=LEFT, fg="green")
+        status_floor.grid(row=4, column=2, sticky=W + E)
+    else:
+        status_floor.grid_forget()
+        status_floor = Label(root, text="Failed to load!", anchor="w", justify=LEFT, fg="red")
+        status_floor.grid(row=4, column=2, sticky=W + E)
 
     if first_text_value != ["Enter-any-value"] and second_text_value != ["Enter-any-value"] and file_path != "":
         button_start["state"] = "normal"
-
+        status_head.grid_forget()
+        status_head = Label(root, text="All data loaded!", fg="green", anchor="w", justify=LEFT)
+        status_head.grid(row=7, column=2, sticky=W + E)
+        button_go["state"] = "disabled"
 def button_start():
     global file_path
     global first_text_value
@@ -172,10 +208,12 @@ def button_start():
     levels_data_base = set()
     for entity in dxf.entities:
         if entity.dxftype == "MTEXT":
-            if first_text_value in entity.raw_text:
-                elevation_temp_data[int(entity.insert[0])] = entity.raw_text.strip()
-            if entity.raw_text[1] == second_text_value:
-                level_temp_data[int(entity.insert[1])] = entity.raw_text.replace("{", "").replace("}", "")
+            for el in first_text_value:
+                if el in entity.raw_text:
+                    elevation_temp_data[int(entity.insert[0])] = entity.raw_text.strip()
+            for el in second_text_value:
+                if entity.raw_text[1] == el:
+                    level_temp_data[int(entity.insert[1])] = entity.raw_text.replace("{", "").replace("}", "")
 
     left_border = 3000
     right_border = 12000
@@ -289,27 +327,40 @@ FlorDrop.grid(row=4, column=1, sticky=W+E)
 button_add_elev = Button(root, text='Add first text values', command=button_add_elev)
 button_add_elev.grid(row=2, column=0, columnspan=2, sticky=W+E)
 button_add_flor = Button(root, text='Add second text values', command=button_add_floor)
-button_add_flor.grid(row=6, column=0, columnspan=2, sticky=W+E)
+button_add_flor.grid(row=5, column=0, columnspan=2, sticky=W+E)
 e2.grid(row=4, column=0)
-myLabel3.grid(row=7, column=0, sticky=W+E)
-button_add.grid(row=8, column=0, sticky=W+E)
+myLabel3.grid(row=6, column=0, sticky=W+E)
+button_add.grid(row=7, column=0, sticky=W+E)
 
 myLabel4.grid(row=0, column=1, sticky=W+E)
 #e3.grid(row=1, column=1)
 myLabel5.grid(row=3, column=1, sticky=W+E)
 #e4.grid(row=3, column=1)
-myLabel6.grid(row=7, column=1, sticky=W+E)
-e5.grid(row=8, column=1)
+myLabel6.grid(row=6, column=1, sticky=W+E)
+e5.grid(row=7, column=1)
 
-button_go.grid(row=10, column=0, columnspan=2, sticky=W+E)
-button_start.grid(row=11, column=0, columnspan=2, sticky=W+E)
+button_go.grid(row=10, column=0, columnspan=3, sticky=W+E)
+button_start.grid(row=11, column=0, columnspan=3, sticky=W+E)
 
 
 reg3= root.register(entry5_not_allowed)
 
 e5.config(validate='key', validatecommand=(reg3, '%d'))
 
-
-
-
+status_head = Label(root, text="Data not loaded!", fg="red")
+status_head.grid(row=7, column=2, sticky=W+E)
+status_info = Label(root, text="STATUS INFO:")
+status_info.grid(row=0, column=2, sticky=W+E)
+status_label1 = Label(root, text="Elevation:", fg="dodger blue")
+status_label1.grid(row=1, column=2, sticky=W+E)
+status_elev = Label(root, text="Waiting to enter data", anchor="w",justify=LEFT, fg="dark orange")
+status_elev.grid(row=2, column=2, sticky=W+E)
+status_label2 = Label(root, text="Floors:", fg="dodger blue")
+status_label2.grid(row=3, column=2, sticky=W+E)
+status_floor = Label(root, text="Waiting to enter data", anchor="w",justify=LEFT, fg="dark orange")
+status_floor.grid(row=4, column=2, sticky=W+E)
+status_label3 = Label(root, text="Your DXF file:", fg="dodger blue")
+status_label3.grid(row=5, column=2, sticky=W+E)
+status_path = Label(root, text="Waiting to enter data", fg="dark orange", anchor="w",justify=LEFT)
+status_path.grid(row=6, column=2, sticky=W+E)
 root.mainloop()
