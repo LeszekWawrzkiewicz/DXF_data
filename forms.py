@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter.filedialog import askopenfilename
+from tkinter import messagebox
 import time
 import dxfgrabber
 
@@ -16,6 +17,11 @@ def button_add():
     global file_path
     file = askopenfilename(filetypes=[("DXF files","*.dxf")])
     file_path = file
+    if file_path != "":
+        messagebox.showinfo("File path added successfully", "File path added successfully")
+        button_add["state"] = "disabled"
+    else:
+        messagebox.showwarning("You must add your DXF file!", "You must add your DXF file!")
 
 def entry3_not_allowed(action_code):
     global entry3_allowed
@@ -184,7 +190,7 @@ def button_start():
                 file.write(export_data("LINE", blocks.name, temp_x_y))
     file.close()
     end = time.time()
-
+    messagebox.showinfo("Operation run successfully", f"Operation run successfully in {int(end)} seconds")
 
 
 myLabel1 = Label(root, text="enter first text value:", anchor="w",justify=LEFT)
