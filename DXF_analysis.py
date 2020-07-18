@@ -1,4 +1,5 @@
 import time
+import math
 
 start = time.time()
 path = r"C:\Users\Hp\Desktop\elewacja.dxf"
@@ -33,6 +34,8 @@ def module_size(temp_size):
 
 dxf = dxfgrabber.readfile(path)
 temp_code_W_H_total = []
+
+file_X_Y = open('file_data_X_Y.txt', 'w')
 for blocks in dxf.blocks:
     if blocks.name:
         for elements in blocks:
@@ -42,9 +45,9 @@ for blocks in dxf.blocks:
                 temp_code_W_H['B'] = module_size(elements.points)[0]
                 temp_code_W_H['H'] = module_size(elements.points)[1]
                 temp_code_W_H_total.append(temp_code_W_H)
-print(str(temp_code_W_H_total))
-# defines your dxf object
-
+                file_X_Y.write(str(temp_code_W_H))
+                file_X_Y.write('\n')
+file_X_Y.close()
 level_temp_data = {}
 elevation_temp_data = {}
 # print(dxf.entities)
@@ -62,80 +65,64 @@ dict_module_coordinate = {}
 list_module_coordinate = []
 temp_global_list = []
 temp_local_list = ()
-
-# print(elevation_temp_data)
+radius = ''
 file_X_Y = open('temp_global_list.txt', 'w')
 for entity in dxf.entities:
     if entity.dxftype == "INSERT":
         x_coordinate = int(entity.insert[0])
         y_coordinate = int(entity.insert[1])
-        if type(entity.name):
+        if type(entity.name) is str:
             dict_module_coordinate = {}
             dict_module_coordinate['name'] = entity.name
-            dict_module_coordinate['X'] = x_coordinate
-            dict_module_coordinate['Y'] = y_coordinate
-            x = list(filter(lambda W_data: W_data['code'] == entity.name, temp_code_W_H_total))[0]['B']
-            dict_module_coordinate['X_R'] = x
-            temp_local_list = (entity.name, x_coordinate, x_coordinate)
-            temp_global_list.append(dict_module_coordinate)
+            # dict_module_coordinate['X'] = x_coordinate
+            # dict_module_coordinate['Y'] = y_coordinate
+            x = list(filter(lambda W_data: W_data['code'] == entity.name, temp_code_W_H_total))[0][
+                'B']  # szerokość modułu
+            y = list(filter(lambda W_data: W_data['code'] == entity.name, temp_code_W_H_total))[0][
+                'H']  # wysokość modułu
+            # dict_module_coordinate['X_R'] = x + x_coordinate
+            temp_local_list = (entity.name, x_coordinate)
+            # temp_global_list.append(dict_module_coordinate)
+            radius = math.sqrt((x / 2) ** 2 + (y / 2) ** 2)
+
+            # temp_global_list.append(dict_module_coordinate)
             file_X_Y.write(str(temp_local_list))
+            dict_module_coordinate['C_X'] = int(
+                x_coordinate + x / 2)  # C_X-wyznaczenie środka współrzędnej środka ramki na współrzędnej X
+            dict_module_coordinate['C_Y'] = int(
+                y_coordinate + y / 2)  # C_Y-wyznaczenie środka współrzędnej środka ramki na współrzędnej Y
+            dict_module_coordinate['radius'] = int(radius)
+            dict_module_coordinate['N'] = 0  # N-neighbour
+            temp_global_list.append(dict_module_coordinate)
             temp_local_list = ()
 
-            # for k_b, v_b in elevation_temp_data.items():
-#               if dict_module_coordinate['X'] in range(k_b - left_border, k_b + right_border):
-#                   dict_module_coordinate['elev'] = v_b.replace("{", "").replace("}", "")
-#                  list_module_coordinate.append(dict_module_coordinate)
-#
 file_X_Y.close()
 
-sorted_list = sorted(temp_global_list, key=itemgetter("X", "Y"))
-
-# with open('temp_global_list_total.txt', 'w') as file_X_Y:
-#    file_X_Y.write(str(sorted_list))
+sorted_list = sorted(temp_global_list, key=itemgetter("C_X", "C_Y"))
 file_X_Y = open('temp_global_list_total.txt', 'w')
 for i in sorted_list:
     file_X_Y.write(f"{str(i)}\n")
+    # print(i)
 file_X_Y.close()
-# with open('temp_global_list.txt','w') as file_X_Y:
-#    file_X_Y.write(str(temp_global_list))
-# with open('file_data_X_Y.txt','wb') as file_X_Y:
-#    file_X_Y.write(pickle.dumps(list_module_coordinate())
-# print("ok")
 
-# x_data=open('file_data_X_Y.txt','rb'):
-# pickle_X_data=pickle.load(x_data)
-# x_data.close()
-# print(level_temp_data)
-for i in list_module_coordinate:
-    Y_temp = int(i['Y'])
-    temp_data = []
-    temp_data = {abs(k - Y_temp): v for k, v in level_temp_data.items()}
-    temp_lambda = lambda temp_data: min(temp_data.items())
-    i['level'] = temp_lambda(temp_data)[1].replace("{", "").replace("}", "")
+temp_id = 1
+mirror_sorted_list = sorted_list
+sorted_list[0]['N'] = temp_id
+for key, frame in enumerate(sorted_list):
 
-with open('file_data_X_Y.txt', 'w') as file_X_Y:
-    file_X_Y.write(str(list_module_coordinate))
+    for temp_key, temp_frame in enumerate(mirror_sorted_list):
+        if temp_key != key and frame['N'] != temp_frame['N']:
+            distance_X = temp_frame['C_X'] - frame['C_X']
+            distance_Y = temp_frame['C_Y'] - frame['C_Y']
+            distance_r = temp_frame['radius'] + frame['radius']
+            if distance_r >= distance_Y:
+                frame['N'] = temp_id
+                temp_frame['N'] = frame['N']
+                print(frame)
+            break
 
-module_data = {}
-file = open('file_data.txt', 'w')
-# you can access info within each block with the following loop:
-# this will print a new line of points for each polyline it finds in each block
+# for i in sorted_list:
+#    print(i)
 
-for blocks in dxf.blocks:
-    if "BL." in blocks.name:
-        temp_x_y = []
-        for elements in blocks:
-            if elements.dxftype == "LWPOLYLINE":
-                file.write(export_data("LWPOLYLINE", blocks.name, elements.points))
-                temp = []
-                temp = export_data_X_Y(elements.points)
-                if len(temp) == 4:
-                    module_data[blocks.name] = module_size(temp)
-            if elements.dxftype == "LINE":
-                temp_x_y.append(elements.start)
-                temp_x_y.append(elements.end)
-        if len(temp_x_y) != 0:
-            file.write(export_data("LINE", blocks.name, temp_x_y))
-file.close()
 end = time.time()
 print(end - start)
