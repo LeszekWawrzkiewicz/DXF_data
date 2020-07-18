@@ -6,12 +6,18 @@ from operator import itemgetter
 
 root = Tk()
 
-first_text_value = ""
-second_text_value = ""
+first_text_value = ["Enter-any-value"]
+second_text_value = ["Enter-any-value"]
 file_path = ""
 entry3_allowed = False
 entry4_allowed = False
 entry5_allowed = False
+
+
+clicked = StringVar()
+clicked2 = StringVar()
+clicked.set(first_text_value[0])
+clicked2.set(second_text_value[0])
 
 def button_add():
     global file_path
@@ -217,17 +223,17 @@ def button_start():
     print(end - start)
 
 
-myLabel1 = Label(root, text="enter first text value:", anchor="w",justify=LEFT)
+myLabel1 = Label(root, text="Enter first text value:", anchor="w",justify=LEFT)
 e1 = Entry(root)
-myLabel2 = Label(root, text="enter second text value:", anchor="w",justify=LEFT)
+myLabel2 = Label(root, text="Enter second text value:", anchor="w",justify=LEFT)
 e2 = Entry(root)
-myLabel3 = Label(root, text="add dxf file:", anchor="w",justify=LEFT)
+myLabel3 = Label(root, text="Add dxf file:", anchor="w",justify=LEFT)
 button_add = Button(root, text='Add .dxf file', command=button_add)
-myLabel4 = Label(root, text="your first text value:", anchor="w",justify=LEFT)
+myLabel4 = Label(root, text="Your first text values:", anchor="w",justify=LEFT)
 e3 = Entry(root)
-myLabel5 = Label(root, text="your second text value:", anchor="w",justify=LEFT)
+myLabel5 = Label(root, text="Your second text values:", anchor="w",justify=LEFT)
 e4 = Entry(root)
-myLabel6 = Label(root, text="path to your file:", anchor="w",justify=LEFT)
+myLabel6 = Label(root, text="Path to your dxf file:", anchor="w",justify=LEFT)
 e5 = Entry(root)
 
 button_go = Button(root, text='LOAD!', command=button_go)
@@ -236,20 +242,28 @@ button_start = Button(root, text='START!', command=button_start, state='disabled
 
 myLabel1.grid(row=0, column=0, sticky=W+E)
 e1.grid(row=1, column=0)
-myLabel2.grid(row=2, column=0, sticky=W+E)
-e2.grid(row=3, column=0)
-myLabel3.grid(row=4, column=0, sticky=W+E)
-button_add.grid(row=5, column=0, sticky=W+E)
+myLabel2.grid(row=3, column=0, sticky=W+E)
+ElevDrop = OptionMenu(root, clicked, *first_text_value)
+ElevDrop.grid(row=1, column=1, sticky=W+E)
+FlorDrop = OptionMenu(root, clicked2, *second_text_value)
+FlorDrop.grid(row=4, column=1, sticky=W+E)
+button_add_elev = Button(root, text='Add first text values')
+button_add_elev.grid(row=2, column=0, columnspan=2, sticky=W+E)
+button_add_flor = Button(root, text='Add second text values')
+button_add_flor.grid(row=6, column=0, columnspan=2, sticky=W+E)
+e2.grid(row=4, column=0)
+myLabel3.grid(row=7, column=0, sticky=W+E)
+button_add.grid(row=8, column=0, sticky=W+E)
 
 myLabel4.grid(row=0, column=1, sticky=W+E)
-e3.grid(row=1, column=1)
-myLabel5.grid(row=2, column=1, sticky=W+E)
-e4.grid(row=3, column=1)
-myLabel6.grid(row=4, column=1, sticky=W+E)
-e5.grid(row=5, column=1)
+#e3.grid(row=1, column=1)
+myLabel5.grid(row=3, column=1, sticky=W+E)
+#e4.grid(row=3, column=1)
+myLabel6.grid(row=7, column=1, sticky=W+E)
+e5.grid(row=8, column=1)
 
-button_go.grid(row=6, column=0, columnspan=2, sticky=W+E)
-button_start.grid(row=7, column=0, columnspan=2, sticky=W+E)
+button_go.grid(row=10, column=0, columnspan=2, sticky=W+E)
+button_start.grid(row=11, column=0, columnspan=2, sticky=W+E)
 
 reg= root.register(entry3_not_allowed)
 reg2= root.register(entry4_not_allowed)
