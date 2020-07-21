@@ -72,6 +72,11 @@ class CreateToolTip(object):
         self.widget.unbind("<Leave>")
         self.widget.unbind("<ButtonPress>")
 
+    def rebind(self):
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+        self.widget.bind("<ButtonPress>", self.leave)
+
 
 
 
@@ -481,23 +486,29 @@ def button_start():
     messagebox.showinfo("Operation run successfully", f"Operation run successfully in {int(end-start)} seconds")
     messagebox.showinfo("Number of rows in DB", f"There are {number} rows in your database")
 
+def openNewWindow():
+    # Toplevel object which will
+    # be treated as a new window
+    newWindow = Toplevel(root)
+
+    # sets the title of the
+    # Toplevel widget
+    newWindow.title("New Window")
+
+    # sets the geometry of toplevel
+    newWindow.geometry("200x200")
+
+    # A Label widget to show in toplevel
+    Label(newWindow,
+          text="This is a new window").pack()
+
+def calculator():
+    import calculator
+
+def cm_in_converter():
+    import cm_in_converter
 
 
-menubar = Menu(root)
-filemenu = Menu(menubar, tearoff=0)
-filemenu.add_command(label="New")
-filemenu.add_command(label="Open DXF file", command=button_add)
-filemenu.add_command(label="LOAD!", command=button_go)
-filemenu.add_separator()
-filemenu.add_command(label="Exit", command=root.quit)
-menubar.add_cascade(label="File", menu=filemenu)
-
-helpmenu = Menu(menubar, tearoff=0)
-helpmenu.add_command(label="README")
-helpmenu.add_command(label="About...")
-menubar.add_cascade(label="Help", menu=helpmenu)
-
-root.config(menu=menubar)
 
 
 
@@ -576,7 +587,105 @@ status_path.grid(row=5, column=0, sticky=W+E+N+S)
 
 e1_ttp = CreateToolTip(e1, "Enter name of your elevation here")
 e2_ttp = CreateToolTip(e2, "Enter name of your floor here")
-#e2_ttp.unbind() - destructor example
+
+
+def help_off():
+    helpmenu.entryconfig(0, state="disabled")
+    helpmenu.entryconfig(1, state="normal")
+    e1_ttp.unbind()
+    e2_ttp.unbind()
+
+def help_on():
+    helpmenu.entryconfig(1, state="disabled")
+    helpmenu.entryconfig(0, state="normal")
+    e1_ttp.rebind()
+    e2_ttp.rebind()
+
+def button_add_menu():
+    global file_path
+    global status_path
+    file = askopenfilename(filetypes=[("DXF files", "*.dxf")])
+    file_path = file
+    if file_path != "":
+        messagebox.showinfo("File path added successfully", "File path added successfully")
+        button_add["state"] = "disabled"
+        filemenu.entryconfig(1, state="disabled")
+        status_path.grid_forget()
+        status_path = Label(status_frame, text="Ready to load!", fg="dark orange", anchor="center")
+        status_path.grid(row=5, column=0, sticky=W+E+N+S)
+    else:
+        messagebox.showwarning("You must add your DXF file!", "You must add your DXF file!")
+
+def button_go_menu():
+    global first_text_value
+    global second_text_value
+    global file_path
+    global entry5_allowed
+    global status_path
+    global status_elev
+    global status_floor
+    global status_head
+
+    if file_path != "":
+        entry5_allowed = True
+        e5.delete(0, END)
+        e5.insert(0, str(file_path))
+        entry5_allowed = False
+        status_path.grid_forget()
+        status_path = Label(status_frame, text="File loaded!", fg="green", anchor="center", justify=CENTER)
+        status_path.grid(row=5, column=0, sticky=W + E + N + S)
+    else:
+        status_path.grid_forget()
+        status_path = Label(status_frame, text="Failed to load!", fg="red", justify=CENTER)
+        status_path.grid(row=5, column=0, sticky=W + E + N + S)
+    if first_text_value != ["Enter-any-value"]:
+        status_elev.grid_forget()
+        status_elev = Label(status_frame, text="Elevation loaded!", anchor="center", fg="green", justify=CENTER)
+        status_elev.grid(row=1, column=0, sticky=W + E)
+    else:
+        status_elev.grid_forget()
+        status_elev = Label(status_frame, text="Failed to load!", anchor="center", fg="red", justify=CENTER)
+        status_elev.grid(row=1, column=0, sticky=W + E)
+    if second_text_value != ["Enter-any-value"]:
+        status_floor.grid_forget()
+        status_floor = Label(status_frame, text="Floors loaded!", anchor="center", fg="green", justify=CENTER)
+        status_floor.grid(row=3, column=0, sticky=W + E)
+    else:
+        status_floor.grid_forget()
+        status_floor = Label(status_frame, text="Failed to load!", anchor="center", fg="red", justify=CENTER)
+        status_floor.grid(row=3, column=0, sticky=W + E)
+
+    if first_text_value != ["Enter-any-value"] and second_text_value != ["Enter-any-value"] and file_path != "":
+        button_start["state"] = "normal"
+        status_head.grid_forget()
+        status_head = Label(root, text="All data loaded!", fg="green", anchor="center", justify=CENTER, borderwidth=1, relief='sunken')
+        status_head.grid(row=7, column=2, columnspan=2, sticky=W+E+N+S)
+        button_go["state"] = "disabled"
+        filemenu.entryconfig(2, state="disabled")
+        button_cancel1["state"] = "disabled"
+        button_cancel2["state"] = "disabled"
+        button_cancel3["state"] = "disabled"
+
+menubar = Menu(root)
+filemenu = Menu(menubar, tearoff=0)
+filemenu.add_command(label="New", command=openNewWindow)
+filemenu.add_command(label="Open DXF file", command=button_add_menu)
+filemenu.add_command(label="LOAD!", command=button_go_menu)
+filemenu.add_command(label="START!", command=button_start, state='disabled')
+filemenu.add_separator()
+filemenu.add_command(label="Exit", command=root.quit)
+menubar.add_cascade(label="File", menu=filemenu)
+
+helpmenu = Menu(menubar, tearoff=0)
+helpmenu.add_command(label="Deactivate tips", state='normal', command=help_off)
+helpmenu.add_command(label="Activate tips", state='disabled', command=help_on)
+menubar.add_cascade(label="Help", menu=helpmenu)
+
+toolsmenu = Menu(menubar, tearoff=0)
+toolsmenu.add_command(label="Calculator", command=calculator)
+toolsmenu.add_command(label="CM/IN Converter", command=cm_in_converter)
+menubar.add_cascade(label="Tools", menu=toolsmenu)
+root.config(menu=menubar)
 
 
 
