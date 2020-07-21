@@ -27,6 +27,8 @@ class CreateToolTip(object):
         self.id = None
         self.tw = None
 
+
+
     def enter(self, event=None):
         self.schedule()
 
@@ -65,6 +67,10 @@ class CreateToolTip(object):
         if tw:
             tw.destroy()
 
+    def unbind(self):
+        self.widget.unbind("<Enter>")
+        self.widget.unbind("<Leave>")
+        self.widget.unbind("<ButtonPress>")
 
 
 
@@ -74,6 +80,9 @@ class CreateToolTip(object):
 root = Tk()
 root.iconbitmap('icon.ico')
 root.title('DXF Files Elevation Engine')
+
+
+
 first_text_value = ["Enter-any-value"]
 second_text_value = ["Enter-any-value"]
 file_path = ""
@@ -95,6 +104,7 @@ def button_add():
     if file_path != "":
         messagebox.showinfo("File path added successfully", "File path added successfully")
         button_add["state"] = "disabled"
+        filemenu.entryconfig(1, state="disabled")
         status_path.grid_forget()
         status_path = Label(status_frame, text="Ready to load!", fg="dark orange", anchor="center")
         status_path.grid(row=5, column=0, sticky=W+E+N+S)
@@ -164,6 +174,7 @@ def cancel3():
     else:
         file_path = ""
         button_add["state"] = "normal"
+        filemenu.entryconfig(1, state="normal")
         status_path.grid_forget()
         status_path = Label(status_frame, text="Waiting to enter data", fg="dark orange", anchor="w", justify=CENTER)
         status_path.grid(row=5, column=0, sticky=W + E + N + S)
@@ -471,6 +482,26 @@ def button_start():
     messagebox.showinfo("Number of rows in DB", f"There are {number} rows in your database")
 
 
+
+menubar = Menu(root)
+filemenu = Menu(menubar, tearoff=0)
+filemenu.add_command(label="New")
+filemenu.add_command(label="Open DXF file", command=button_add)
+filemenu.add_command(label="LOAD!", command=button_go)
+filemenu.add_separator()
+filemenu.add_command(label="Exit", command=root.quit)
+menubar.add_cascade(label="File", menu=filemenu)
+
+helpmenu = Menu(menubar, tearoff=0)
+helpmenu.add_command(label="README")
+helpmenu.add_command(label="About...")
+menubar.add_cascade(label="Help", menu=helpmenu)
+
+root.config(menu=menubar)
+
+
+
+
 myLabel1 = Label(root, text="ENTER NAMES:", anchor="w",justify=LEFT, font="-weight bold")
 e1 = Entry(root)
 myLabel2 = Label(root, text="Enter second text value:", anchor="w",justify=LEFT)
@@ -545,7 +576,7 @@ status_path.grid(row=5, column=0, sticky=W+E+N+S)
 
 e1_ttp = CreateToolTip(e1, "Enter name of your elevation here")
 e2_ttp = CreateToolTip(e2, "Enter name of your floor here")
-
+#e2_ttp.unbind() - destructor example
 
 
 
