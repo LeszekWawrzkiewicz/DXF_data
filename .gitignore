@@ -140,3 +140,9 @@ cython_debug/
 test.db
 local_data_base.py
 training.py
+
+file_data.txt
+file_data_X_Y.txt
+temp_global_list.txt
+temp_global_list_total.txt
+dxf.db
