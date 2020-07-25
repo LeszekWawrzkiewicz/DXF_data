@@ -374,7 +374,7 @@ def button_start():
                 file.write(export_data("LINE", blocks.name, temp_x_y))
     file.close()
     end = time.time()
-    messagebox.showinfo("Operation run successfully", f"Operation run successfully in {int(end-start)} seconds")
+    messagebox.showinfo("Operation run successfully", f"Operation run successfully in {float(end-start)} seconds")
 
 
 myLabel1 = Label(root, text="ENTER NAMES:", anchor="w",justify=LEFT, font="-weight bold")
