@@ -735,6 +735,26 @@ def openNewWindow():
     show_elev()
     show_blocks()
 
+    menubar = Menu(newWindow)
+    filemenu = Menu(menubar, tearoff=0)
+    filemenu.add_command(label="SAVE", state='disabled')
+    filemenu.add_separator()
+    filemenu.add_command(label="Exit All", command=newWindow.quit)
+    menubar.add_cascade(label="File", menu=filemenu)
+
+    helpmenu = Menu(menubar, tearoff=0)
+    helpmenu.add_command(label="Deactivate tips", state='normal')
+    helpmenu.add_command(label="Activate tips", state='disabled')
+    helpmenu.add_separator()
+    helpmenu.add_command(label="Version", command=show_version)
+    menubar.add_cascade(label="Help", menu=helpmenu)
+
+    toolsmenu = Menu(menubar, tearoff=0)
+    toolsmenu.add_command(label="Calculator")
+    toolsmenu.add_command(label="CM/IN Converter")
+    menubar.add_cascade(label="Tools", menu=toolsmenu)
+    newWindow.config(menu=menubar)
+
 def calculator():
     import calculator
 
