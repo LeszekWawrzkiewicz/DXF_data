@@ -1,5 +1,6 @@
 import time
 import math
+import sqlite3 as lite
 
 class connection_insert_frame_X_elevation(dict):
     def __init__(self):
@@ -8,14 +9,12 @@ class connection_insert_frame_X_elevation(dict):
     def add(self, key, value):
         self[key] = value
 
+
 start = time.time()
 path = r"C:\Users\Hp\Desktop\elewacja.dxf"
 import dxfgrabber
 from operator import itemgetter
 
-def export_data(shape_name, block_name,
-                block_points):  # calculation to export data about basic and intermediate geometry of the frame
-    return f"{block_name}\{shape_name}\{export_data_X_Y(block_points)}\{len(export_data_X_Y(block_points))}\n"
 
 def module_size(temp_size):
     '''calculation the sizes of the frame when the frame has the insert point
@@ -26,6 +25,7 @@ def module_size(temp_size):
     calc_data = int(abs(temp_size[0][1] - temp_size[2][1]))
     temp_data_size.append(calc_data)
     return temp_data_size
+
 
 dxf = dxfgrabber.readfile(path)
 temp_code_W_H_total = []
@@ -61,7 +61,7 @@ for entity in dxf.entities:
 temp_global_list = []
 temp_local_list = ()
 radius = ''
-file_X_Y = open('temp_global_list.txt', 'w')
+# file_X_Y = open('temp_global_list.txt', 'w')
 
 '''calculation the location of the middle point of the frames by analysisi insert point of them,
 preparing the temporary data about the "radius", the radius is a half of hypotenuse the frame'''
@@ -78,24 +78,30 @@ for entity in dxf.entities:
             H_frame = list(filter(lambda H_data: H_data['code'] == entity.name, temp_code_W_H_total))[0][
                 'H']  # wysokość modułu
             temp_local_list = (entity.name, x_coordinate)
-            radius = math.sqrt((W_frame / 2) ** 2 + (H_frame / 2) ** 2)
-            file_X_Y.write(str(temp_local_list))
+            radius = math.sqrt((W_frame) ** 2 + (H_frame) ** 2)/2
+            # file_X_Y.write(str(temp_local_list))
             dict_module_coordinate['C_X'] = int(
                 x_coordinate + W_frame / 2)  # C_X-calculation the middle point in horizontal direction - X-direction
             dict_module_coordinate['C_Y'] = int(
                 y_coordinate + H_frame / 2)  # C_Y-calculation the middle point in vertical direction - Y-direction
             dict_module_coordinate['radius'] = int(radius)
+            dict_module_coordinate['X1'] = dict_module_coordinate['C_X']-int(radius)
+            dict_module_coordinate['X2'] = dict_module_coordinate['C_X']+int(radius)
+            dict_module_coordinate['Y1'] = dict_module_coordinate['C_Y']-int(radius)
+            dict_module_coordinate['Y2'] = dict_module_coordinate['C_Y']+int(radius)
+
             dict_module_coordinate['elev'] = ''
             dict_module_coordinate['level'] = ''
             temp_global_list.append(dict_module_coordinate)
             temp_local_list = ()
 
-file_X_Y.close()
+# file_X_Y.close()
 
 sorted_list = sorted(temp_global_list, key=itemgetter("C_X", "C_Y"))
 file_X_Y = open('temp_global_list_total.txt', 'w')
 for i in sorted_list:
     file_X_Y.write(f"{str(i)}\n")
+    print(i)
 file_X_Y.close()
 
 line_list_X = []
@@ -139,18 +145,31 @@ frame_elevation_level = []
 sorted_main_elevation_temp_data = sorted(main_elevation_temp_data, key=itemgetter("X"), reverse=False)
 '''create a list of data: frame, elevation, level'''
 for i in temp_global_list:
-    temp_frame_elevation_level = {}
+    temp_frame_elevation_level = []
     i['elev'] = X_elev_dict_obj[i['C_X']]
     Y_temp = int(i['C_Y'])
     temp_data = []
     temp_data = {abs(k - Y_temp): v for k, v in level_temp_data.items()}
     temp_lambda = lambda temp_data: min(temp_data.items())
     i['level'] = temp_lambda(temp_data)[1].replace("{", "").replace("}", "")
-    temp_frame_elevation_level['name'] = i['name']
-    temp_frame_elevation_level['elev'] = sorted_main_elevation_temp_data[i['elev']-1]['elev'].replace("{", "").replace("}", "")
-    temp_frame_elevation_level['level'] = i['level']
+    temp_frame_elevation_level.append(i['name'])
+    temp_frame_elevation_level.append(sorted_main_elevation_temp_data[i['elev'] - 1]['elev'].replace("{", "").replace("}", ""))
+    temp_frame_elevation_level.append(i['level'])
     frame_elevation_level.append(temp_frame_elevation_level)
-for i in frame_elevation_level:
-    print(i)
+
+    con = lite.connect('test.db')
+
+with con:
+    cur = con.cursor()
+    cur.execute("DROP TABLE IF EXISTS frame_elevation_level")
+    cur.execute("CREATE TABLE frame_elevation_level(name TXT, elev TEXT, level TXT)")
+    cur.executemany("INSERT INTO frame_elevation_level VALUES(?, ?, ?)", frame_elevation_level)
+with con:
+    cur = con.cursor()
+    cur.execute("SELECT * FROM frame_elevation_level")
+    rows = cur.fetchall()
+#    for row in rows:
+ #       print(row)
+
 end = time.time()
 print(end - start)

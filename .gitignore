@@ -139,3 +139,4 @@ cython_debug/
 
 test.db
 local_data_base.py
+training.py

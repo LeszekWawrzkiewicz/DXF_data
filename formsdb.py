@@ -472,6 +472,7 @@ def button_start():
             "}", "")
         temp_frame_elevation_level['level'] = i['level']
         frame_elevation_level.append(temp_frame_elevation_level)
+
     for i in frame_elevation_level:
         connection = sqlite3.connect("dxf.db")
         cursor = connection.cursor()
