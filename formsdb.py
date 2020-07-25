@@ -10,7 +10,7 @@ import os
 """ multi
 line
 comment"""
-
+__version__ = 0.9
 
 class CreateToolTip(object):
     """
@@ -79,18 +79,35 @@ class CreateToolTip(object):
 
 
 
+def make_menu(w):
+    global the_menu
+    the_menu = Menu(w, tearoff=0)
+    the_menu.add_command(label="Cut")
+    the_menu.add_command(label="Copy")
+    the_menu.add_command(label="Paste")
 
+def show_menu(e):
+    w = e.widget
+    the_menu.entryconfigure("Cut",
+    command=lambda: w.event_generate("<<Cut>>"))
+    the_menu.entryconfigure("Copy",
+    command=lambda: w.event_generate("<<Copy>>"))
+    the_menu.entryconfigure("Paste",
+    command=lambda: w.event_generate("<<Paste>>"))
+    the_menu.tk.call("tk_popup", the_menu, e.x_root, e.y_root)
 
 
 root = Tk()
 root.iconbitmap('icon.ico')
 root.title('DXF Files Elevation Engine')
-
+make_menu(root)
 
 
 first_text_value = ["Enter-any-value"]
 second_text_value = ["Enter-any-value"]
 file_path = ""
+history_elev=""
+history_floor=""
 entry3_allowed = False
 entry4_allowed = False
 entry5_allowed = False
@@ -100,6 +117,45 @@ clicked = StringVar()
 clicked2 = StringVar()
 clicked.set(first_text_value[0])
 clicked2.set(second_text_value[0])
+
+
+def shift_up(*args):
+    text_pre = e1.get()
+    e1.delete(0, END)
+    e1.insert(0, text_pre.upper())
+
+def shift_down(*args):
+    text_pre = e1.get()
+    e1.delete(0, END)
+    e1.insert(0, text_pre.lower())
+
+def shift_right(*args):
+    text_pre = e1.get()
+    e1.delete(0, END)
+    result = ""
+    for letter in text_pre:
+        result += letter.swapcase()
+    e1.insert(0, result)
+
+def shift_left(*args):
+    text_pre = e1.get()
+    result = ""
+    for letter in reversed(text_pre):
+        result += letter
+    e1.delete(0, END)
+    e1.insert(0, result)
+
+def upper_key_elev(*args):
+    global history_elev
+    if history_elev != "":
+        e1.delete(0, END)
+        e1.insert(0, history_elev)
+
+def upper_key_floor(*args):
+    global history_floor
+    if history_floor != "":
+        e2.delete(0, END)
+        e2.insert(0, history_floor)
 
 def button_add():
     global file_path
@@ -184,7 +240,8 @@ def cancel3():
         status_path = Label(status_frame, text="Waiting to enter data", fg="dark orange", anchor="w", justify=CENTER)
         status_path.grid(row=5, column=0, sticky=W + E + N + S)
 
-def button_add_elev():
+def button_add_elev(*args):
+    global history_elev
     global first_text_value
     global ElevDrop
     global clicked
@@ -208,20 +265,26 @@ def button_add_elev():
         status_elev.grid_forget()
         status_elev = Label(status_frame, text="Ready to load!", anchor="center", fg="dark orange", justify=CENTER)
         status_elev.grid(row=1, column=0, sticky=W + E)
+        history_elev = add_elevation
+        e1.delete(0, END)
         messagebox.showinfo("Added first text value successfully", f"Added *{add_elevation}* successfully. You can add more than one value")
     elif first_text_value != ["Enter-any-value"] and good_to_go == True:
         first_text_value.append(add_elevation)
         ElevDrop.grid_forget()
         ElevDrop = OptionMenu(root, clicked, *first_text_value)
         ElevDrop.grid(row=1, column=1, sticky=W + E)
+        history_elev = add_elevation
+        e1.delete(0, END)
         messagebox.showinfo("Added first text value successfully",f"Added {add_elevation} successfully. You can add more values")
 
 
-def button_add_floor():
+def button_add_floor(*args):
+    global history_floor
     global second_text_value
     global FlorDrop
     global clicked2
     global status_floor
+
     add_floor = e2.get()
     good_to_go = False
     if add_floor != "":
@@ -241,6 +304,8 @@ def button_add_floor():
         status_floor.grid_forget()
         status_floor = Label(status_frame, text="Ready to load!", anchor="center", fg="dark orange", justify=CENTER)
         status_floor.grid(row=3, column=0, sticky=W+E)
+        history_floor = add_floor
+        e2.delete(0, END)
         messagebox.showinfo("Added second text value successfully",
                             f"Added *{add_floor}* successfully. You can add more than one value")
     elif second_text_value != ["Enter-any-value"] and good_to_go == True:
@@ -248,6 +313,8 @@ def button_add_floor():
         FlorDrop.grid_forget()
         FlorDrop = OptionMenu(root, clicked2, *second_text_value)
         FlorDrop.grid(row=4, column=1, sticky=W + E)
+        history_floor = add_floor
+        e2.delete(0, END)
         messagebox.showinfo("Added second text value successfully",
                             f"Added {add_floor} successfully. You can add more values")
 
@@ -459,32 +526,35 @@ def button_start():
     sorted_main_elevation_temp_data = sorted(main_elevation_temp_data, key=itemgetter("X"), reverse=False)
     '''create a list of data: frame, elevation, level'''
     for i in temp_global_list:
-        temp_frame_elevation_level = {}
+        temp_frame_elevation_level = []
         i['elev'] = X_elev_dict_obj[i['C_X']]
         Y_temp = int(i['C_Y'])
         temp_data = []
         temp_data = {abs(k - Y_temp): v for k, v in level_temp_data.items()}
         temp_lambda = lambda temp_data: min(temp_data.items())
         i['level'] = temp_lambda(temp_data)[1].replace("{", "").replace("}", "")
-        temp_frame_elevation_level['name'] = i['name']
-        temp_frame_elevation_level['elev'] = sorted_main_elevation_temp_data[i['elev'] - 1]['elev'].replace("{",
-                                                                                                            "").replace(
-            "}", "")
-        temp_frame_elevation_level['level'] = i['level']
+        temp_frame_elevation_level.append(i['name'])
+        temp_frame_elevation_level.append(
+            sorted_main_elevation_temp_data[i['elev'] - 1]['elev'].replace("{", "").replace("}", ""))
+        temp_frame_elevation_level.append(i['level'])
         frame_elevation_level.append(temp_frame_elevation_level)
-    for i in frame_elevation_level:
-        connection = sqlite3.connect("dxf.db")
-        cursor = connection.cursor()
-        #name, elevation, level
-        query = "INSERT INTO dxf (name, elevation, level) values (?, ?, ?)"
-        cursor.execute(query, (i['name'], i['elev'], i['level']))
-        connection.commit()
+    con = sqlite3.connect('dxf.db')
+    with con:
+        cur = con.cursor()
+        cur.executemany("INSERT INTO dxf (name, elevation, level) VALUES(?, ?, ?)", frame_elevation_level)
+        con.commit()
+
+    with con:
+        cur = con.cursor()
+        cur.execute("SELECT * FROM dxf")
+        rows = cur.fetchall()
+        number_of_rows = 0
+        for _ in rows:
+            number_of_rows+=1
+
     end = time.time()
-    number = cursor.execute("SELECT COUNT(*) from dxf")
-    row = number.fetchone()
-    connection.close()
     messagebox.showinfo("Operation run successfully", f"Operation run successfully in {int(end-start)} seconds")
-    messagebox.showinfo("Number of rows in DB", f"There are {number} rows in your database")
+    messagebox.showinfo("Number of rows in DB", f"There are {number_of_rows} rows in your database")
 
 def openNewWindow():
     # Toplevel object which will
@@ -534,6 +604,13 @@ button_cancel3 = Button(root, text='CANCEL', command=cancel3)
 
 myLabel1.grid(row=0, column=0, sticky=W+E)
 e1.grid(row=1, column=0)
+e1.bind("<Return>", button_add_elev)
+e1.bind("<Control-Up>", shift_up)
+e1.bind("<Control-Down>", shift_down)
+e1.bind("<Control-Right>", shift_right)
+e1.bind("<Control-Left>", shift_left)
+e1.bind("<Up>", upper_key_elev)
+e1.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
 myLabel2.grid(row=3, column=0, sticky=W+E+N+S)
 ElevDrop = OptionMenu(root, clicked, *first_text_value)
 ElevDrop.grid(row=1, column=1, sticky=W+E+N+S, padx=0)
@@ -544,6 +621,9 @@ button_add_elev.grid(row=2, column=0, columnspan=2, sticky=W+E, padx=2)
 button_add_flor = Button(root, text='Add second text values', command=button_add_floor)
 button_add_flor.grid(row=5, column=0, columnspan=2, sticky=W+E, padx=2)
 e2.grid(row=4, column=0, sticky=W+E+N+S)
+e2.bind("<Return>", button_add_floor)
+e2.bind("<Up>", upper_key_floor)
+e2.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
 myLabel3.grid(row=6, column=0, sticky=W+E)
 button_add.grid(row=7, column=0, sticky=W+E)
 
@@ -601,7 +681,7 @@ def help_on():
     e1_ttp.rebind()
     e2_ttp.rebind()
 
-def button_add_menu():
+def button_add_menu(*args):
     global file_path
     global status_path
     file = askopenfilename(filetypes=[("DXF files", "*.dxf")])
@@ -666,6 +746,12 @@ def button_go_menu():
         button_cancel2["state"] = "disabled"
         button_cancel3["state"] = "disabled"
 
+
+def show_version():
+    messagebox.showinfo(f"Currently working on version {__version__}!", f"You are currently working on"
+                                                                        f" version {__version__} of your"
+                                                                        f" DXF Files Elevation Engine!")
+
 menubar = Menu(root)
 filemenu = Menu(menubar, tearoff=0)
 filemenu.add_command(label="New", command=openNewWindow)
@@ -679,6 +765,8 @@ menubar.add_cascade(label="File", menu=filemenu)
 helpmenu = Menu(menubar, tearoff=0)
 helpmenu.add_command(label="Deactivate tips", state='normal', command=help_off)
 helpmenu.add_command(label="Activate tips", state='disabled', command=help_on)
+helpmenu.add_separator()
+helpmenu.add_command(label="Version", command=show_version)
 menubar.add_cascade(label="Help", menu=helpmenu)
 
 toolsmenu = Menu(menubar, tearoff=0)
@@ -687,6 +775,6 @@ toolsmenu.add_command(label="CM/IN Converter", command=cm_in_converter)
 menubar.add_cascade(label="Tools", menu=toolsmenu)
 root.config(menu=menubar)
 
-
+root.bind("<Control-o>", button_add_menu)
 
 root.mainloop()
