@@ -15,6 +15,14 @@ comment"""
 
 __version__ = 0.9
 
+current_state = None
+previous_state = None
+cached_num = None
+f_num = None
+ready_to_math = False
+ready_to_equal = False
+history = ""
+path_save = ""
 class CreateToolTip(object):
     """
     create a tooltip for a given widget
@@ -168,7 +176,7 @@ def button_add():
     if file_path != "":
         messagebox.showinfo("File path added successfully", "File path added successfully")
         button_add["state"] = "disabled"
-        filemenu.entryconfig(1, state="disabled")
+        filemenu.entryconfig(0, state="disabled")
         status_path.grid_forget()
         status_path = Label(status_frame, text="Ready to load!", fg="dark orange", anchor="center")
         status_path.grid(row=5, column=0, sticky=W+E+N+S)
@@ -238,7 +246,7 @@ def cancel3():
     else:
         file_path = ""
         button_add["state"] = "normal"
-        filemenu.entryconfig(1, state="normal")
+        filemenu.entryconfig(0, state="normal")
         status_path.grid_forget()
         status_path = Label(status_frame, text="Waiting to enter data", fg="dark orange", anchor="w", justify=CENTER)
         status_path.grid(row=5, column=0, sticky=W + E + N + S)
@@ -625,7 +633,7 @@ def openNewWindow():
             query = "SELECT * FROM dxf where level=?"
             cur.execute(query, (floor,))
             rows = cur.fetchall()
-            for row in rows:
+            for _ in rows:
                 count += 1
         floors_numbers[floor] = count
 
@@ -679,6 +687,7 @@ def openNewWindow():
         ee1.delete(0, END)
         insertion = blocks_numbers[blocks_var.get()]
         ee1.insert(0, insertion)
+        statusLabel4["text"] = f"Number of {blocks_var.get()} occurrences:  "
 
     def show_elev(*args):
         ee2.delete(0, END)
@@ -687,13 +696,39 @@ def openNewWindow():
             count += 1
         insertion = count
         ee2.insert(0, insertion)
+        statusLabel5["text"] = f"Number of {elev_var.get()} occurrences:  "
 
     def show_floor(*args):
         ee3.delete(0, END)
         insertion = floors_numbers[floor_var.get()]
         ee3.insert(0, insertion)
+        statusLabel6["text"] = f"Number of {floor_var.get()} occurrences:  "
 
-    myLabel1 = Label(newWindow, text="YOUR STATUS RAPORT:", anchor="w", justify=CENTER, font="-weight bold")
+    def save(*args):
+        file1 = askopenfilename(filetypes=[("TXT files", "*.txt")])
+        file_path1 = file1
+        if file_path1 != "":
+            messagebox.showinfo("Saving your report!", "File found. Saving your report!")
+            f = open(file_path1, "a")
+            f.write("Your report from DXF Files Elevation Engine \n")
+            f.write(f"Number of blocks: {len(blocks)}  \n")
+            f.write(f"Your blocks: {blocks} \n")
+            f.write("Number of occurrences of each block: \n")
+            for bl in blocks_numbers.keys():
+                msg = " "
+                msg+= str(bl)
+                msg+= ": "
+                msg+= str(blocks_numbers[bl])
+                f.write(f"{msg} \n")
+            f.close()
+            messagebox.showinfo("Report saved!", f"Report saved in {file_path}")
+
+        else:
+            messagebox.showwarning("You must add your TXT file!", "You must add your TXT file"
+                                                                  "to save the report!")
+
+
+    myLabel1 = Label(newWindow, text="YOUR STATUS REPORT:", anchor="w", justify=CENTER, font="-weight bold")
     myLabel1.grid(row=0, column=0, columnspan=10)
 
     status_frame.grid(row=1, column=0, rowspan=5, columnspan=5, sticky=W + E + N + S)
@@ -728,6 +763,8 @@ def openNewWindow():
     ee1.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
     ee2.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
     ee3.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
+    button_save = Button(newWindow, text='SAVE!', command=save)
+    button_save.grid(row=6, column=0, columnspan=5, sticky=W + E)
 
     """FUNCTIONS"""
 
@@ -754,9 +791,362 @@ def openNewWindow():
     toolsmenu.add_command(label="CM/IN Converter")
     menubar.add_cascade(label="Tools", menu=toolsmenu)
     newWindow.config(menu=menubar)
+    newWindow.bind("<Control-s>", save)
+
 
 def calculator():
-    import calculator
+    calcWindow = Toplevel(root)
+    calcWindow.title('Simple Calculator')
+    calcWindow.iconbitmap(r'calc.ico')
+
+    operation = Entry(calcWindow, width=35, borderwidth=5)
+    operation.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
+    e = Entry(calcWindow, width=35, borderwidth=5)
+    e.grid(row=1, column=0, columnspan=3, padx=10, pady=10)
+
+
+
+    def button_float():
+        current = e.get()
+        if len(current) == 0:
+            e.delete(0, END)
+            e.insert(0, str(current))
+        elif "." in current:
+            e.delete(0, END)
+            e.insert(0, str(current))
+        else:
+            e.delete(0, END)
+            e.insert(0, str(current) + str("."))
+
+    def button_click(number):
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+        previous_state = current_state
+
+        current_state = 'click'
+
+        if previous_state in ['add', 'sub', 'mul', 'div'] and ready_to_equal == False:
+            ready_to_equal = True
+            button_equal['state'] = 'normal'
+
+        current = e.get()
+        e.delete(0, END)
+        e.insert(0, str(current) + str(number))
+
+        if current_state == 'click':
+            if ready_to_math == False:
+                button_add['state'] = 'normal'
+                button_subtract['state'] = 'normal'
+                button_divide['state'] = 'normal'
+                button_multiply['state'] = 'normal'
+            button_clear['state'] = 'normal'
+
+    def button_clear():
+        global current_state
+        global previous_state
+        global ready_to_math
+        global ready_to_equal
+        global cached_num
+        global f_num
+        global history
+        previous_state = current_state
+
+        current_state = 'clear'
+
+        e.delete(0, END)
+        ready_to_equal = False
+        ready_to_math = False
+        cached_num = None
+        f_num = None
+        history = ""
+
+        operation.delete(0, END)
+
+        button_equal['state'] = 'disabled'
+        button_add['state'] = 'disabled'
+        button_subtract['state'] = 'disabled'
+        button_divide['state'] = 'disabled'
+        button_multiply['state'] = 'disabled'
+
+    def button_add():
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+
+        if ready_to_equal == True:
+            ready_to_equal = False
+            button_equal['state'] = 'disabled'
+
+        if ready_to_math == False:
+            ready_to_math = True
+            button_add['state'] = 'disabled'
+            button_subtract['state'] = 'disabled'
+            button_divide['state'] = 'disabled'
+            button_multiply['state'] = 'disabled'
+
+        previous_state = current_state
+
+        current_state = 'add'
+
+        first_number = e.get()
+        global f_num
+        global math
+        math = 'addition'
+
+        f_num = float(first_number)
+        e.delete(0, END)
+
+        global history
+        if previous_state != 'equal':
+            history += str(f_num) + " + "
+            operation.delete(0, END)
+            operation.insert(0, history)
+        if previous_state == 'equal':
+            history += " + "
+            operation.delete(0, END)
+            operation.insert(0, history)
+
+    def button_subtract():
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+
+        if ready_to_equal == True:
+            ready_to_equal = False
+            button_equal['state'] = 'disabled'
+
+        if ready_to_math == False:
+            ready_to_math = True
+            button_add['state'] = 'disabled'
+            button_subtract['state'] = 'disabled'
+            button_divide['state'] = 'disabled'
+            button_multiply['state'] = 'disabled'
+
+        previous_state = current_state
+
+        current_state = 'sub'
+
+        first_number = e.get()
+        global f_num
+        global math
+        math = 'subtraction'
+
+        f_num = float(first_number)
+        e.delete(0, END)
+
+        global history
+        if previous_state != 'equal':
+            history += str(f_num) + " - "
+            operation.delete(0, END)
+            operation.insert(0, history)
+        if previous_state == 'equal':
+            history += " - "
+            operation.delete(0, END)
+            operation.insert(0, history)
+
+    def button_multiply():
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+
+        if ready_to_equal == True:
+            ready_to_equal = False
+            button_equal['state'] = 'disabled'
+
+        if ready_to_math == False:
+            ready_to_math = True
+            button_add['state'] = 'disabled'
+            button_subtract['state'] = 'disabled'
+            button_divide['state'] = 'disabled'
+            button_multiply['state'] = 'disabled'
+
+        previous_state = current_state
+
+        current_state = 'mul'
+
+        first_number = e.get()
+        global f_num
+        global math
+        math = 'multiplication'
+
+        f_num = float(first_number)
+        e.delete(0, END)
+
+        global history
+        if previous_state != 'equal':
+            history += str(f_num) + " x "
+            operation.delete(0, END)
+            operation.insert(0, history)
+        if previous_state == 'equal':
+            history += " x "
+            operation.delete(0, END)
+            operation.insert(0, history)
+
+    def button_divide():
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+
+        if ready_to_equal == True:
+            ready_to_equal = False
+            button_equal['state'] = 'disabled'
+
+        if ready_to_math == False:
+            ready_to_math = True
+            button_add['state'] = 'disabled'
+            button_subtract['state'] = 'disabled'
+            button_divide['state'] = 'disabled'
+            button_multiply['state'] = 'disabled'
+
+        previous_state = current_state
+
+        current_state = 'div'
+
+        first_number = e.get()
+        global f_num
+        global math
+        math = 'division'
+
+        f_num = float(first_number)
+        e.delete(0, END)
+
+        global history
+        if previous_state != 'equal':
+            history += str(f_num) + " / "
+            operation.delete(0, END)
+            operation.insert(0, history)
+        if previous_state == 'equal':
+            history += " / "
+            operation.delete(0, END)
+            operation.insert(0, history)
+
+    def button_equal():
+        global current_state
+        global previous_state
+        global cached_num
+        global f_num
+        global ready_to_math
+        global history
+
+        ready_to_math = False
+        button_add['state'] = 'normal'
+        button_subtract['state'] = 'normal'
+        button_divide['state'] = 'normal'
+        button_multiply['state'] = 'normal'
+
+        if current_state != 'equal':
+            previous_state = current_state
+
+            current_state = 'equal'
+
+            second_number = e.get()
+            cached_num = float(second_number)
+            e.delete(0, END)
+
+            if math == 'addition':
+                history += str(second_number)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, f_num + float(second_number))
+                f_num += float(second_number)
+            elif math == 'subtraction':
+                history += str(second_number)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) - float(second_number))
+                f_num -= float(second_number)
+            elif math == 'multiplication':
+                history += str(second_number)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) * float(second_number))
+                f_num *= float(second_number)
+            elif math == 'division':
+                history += str(second_number)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) / float(second_number))
+                f_num /= float(second_number)
+
+
+
+        elif current_state == 'equal':
+            previous_state = current_state
+
+            e.delete(0, END)
+
+            if math == 'addition':
+                history += " + " + str(cached_num)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, f_num + float(cached_num))
+                f_num += float(cached_num)
+            elif math == 'subtraction':
+                history += " - " + str(cached_num)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) - float(cached_num))
+                f_num -= float(cached_num)
+            elif math == 'multiplication':
+                history += " x " + str(cached_num)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) * float(cached_num))
+                f_num *= float(cached_num)
+            elif math == 'division':
+                history += " / " + str(cached_num)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) / float(cached_num))
+                f_num /= float(cached_num)
+
+    button_1 = Button(calcWindow, text='1', padx=40, pady=20, command=lambda: button_click(1))
+    button_2 = Button(calcWindow, text='2', padx=40, pady=20, command=lambda: button_click(2))
+    button_3 = Button(calcWindow, text='3', padx=40, pady=20, command=lambda: button_click(3))
+    button_4 = Button(calcWindow, text='4', padx=40, pady=20, command=lambda: button_click(4))
+    button_5 = Button(calcWindow, text='5', padx=40, pady=20, command=lambda: button_click(5))
+    button_6 = Button(calcWindow, text='6', padx=40, pady=20, command=lambda: button_click(6))
+    button_7 = Button(calcWindow, text='7', padx=40, pady=20, command=lambda: button_click(7))
+    button_8 = Button(calcWindow, text='8', padx=40, pady=20, command=lambda: button_click(8))
+    button_9 = Button(calcWindow, text='9', padx=40, pady=20, command=lambda: button_click(9))
+    button_0 = Button(calcWindow, text='0', padx=40, pady=20, command=lambda: button_click(0))
+    button_add = Button(calcWindow, text='+', padx=39, pady=20, command=button_add, state=DISABLED)
+    button_equal = Button(calcWindow, text='=', padx=40, pady=20, command=button_equal, state=DISABLED)
+    button_clear = Button(calcWindow, text='Clear', padx=79, pady=20, command=button_clear, state=DISABLED)
+
+    button_subtract = Button(calcWindow, text='-', padx=41, pady=20, command=button_subtract, state=DISABLED)
+    button_multiply = Button(calcWindow, text='x', padx=40, pady=20, command=button_multiply, state=DISABLED)
+    button_divide = Button(calcWindow, text='/', padx=41, pady=20, command=button_divide, state=DISABLED)
+
+    button_1.grid(row=4, column=0, )
+    button_2.grid(row=4, column=1, )
+    button_3.grid(row=4, column=2, )
+
+    button_4.grid(row=3, column=0, )
+    button_5.grid(row=3, column=1, )
+    button_6.grid(row=3, column=2, )
+
+    button_7.grid(row=2, column=0, )
+    button_8.grid(row=2, column=1, )
+    button_9.grid(row=2, column=2, )
+
+    button_0.grid(row=5, column=0)
+    button_float = Button(calcWindow, text='.', padx=40, pady=20, command=button_float)
+
+    button_clear.grid(row=5, column=1, columnspan=2)
+    button_add.grid(row=6, column=0)
+    button_equal.grid(row=6, column=1)
+    button_float.grid(row=6, column=2)
+
+    button_subtract.grid(row=7, column=0)
+    button_multiply.grid(row=7, column=1)
+    button_divide.grid(row=7, column=2)
 
 def cm_in_converter():
     import cm_in_converter
@@ -872,14 +1262,14 @@ def button_add_menu(*args):
     if file_path != "":
         messagebox.showinfo("File path added successfully", "File path added successfully")
         button_add["state"] = "disabled"
-        filemenu.entryconfig(1, state="disabled")
+        filemenu.entryconfig(0, state="disabled")
         status_path.grid_forget()
         status_path = Label(status_frame, text="Ready to load!", fg="dark orange", anchor="center")
         status_path.grid(row=5, column=0, sticky=W+E+N+S)
     else:
         messagebox.showwarning("You must add your DXF file!", "You must add your DXF file!")
 
-def button_go_menu():
+def button_go_menu(*args):
     global first_text_value
     global second_text_value
     global file_path
@@ -924,7 +1314,7 @@ def button_go_menu():
         status_head = Label(root, text="All data loaded!", fg="green", anchor="center", justify=CENTER, borderwidth=1, relief='sunken')
         status_head.grid(row=7, column=2, columnspan=2, sticky=W+E+N+S)
         button_go["state"] = "disabled"
-        filemenu.entryconfig(2, state="disabled")
+        filemenu.entryconfig(1, state="disabled")
         button_cancel1["state"] = "disabled"
         button_cancel2["state"] = "disabled"
         button_cancel3["state"] = "disabled"
@@ -937,10 +1327,8 @@ def show_version():
 
 menubar = Menu(root)
 filemenu = Menu(menubar, tearoff=0)
-filemenu.add_command(label="New", command=openNewWindow)
 filemenu.add_command(label="Open DXF file", command=button_add_menu)
 filemenu.add_command(label="LOAD!", command=button_go_menu)
-filemenu.add_command(label="START!", command=button_start, state='disabled')
 filemenu.add_separator()
 filemenu.add_command(label="Exit", command=root.quit)
 menubar.add_cascade(label="File", menu=filemenu)
@@ -956,8 +1344,16 @@ toolsmenu = Menu(menubar, tearoff=0)
 toolsmenu.add_command(label="Calculator", command=calculator)
 toolsmenu.add_command(label="CM/IN Converter", command=cm_in_converter)
 menubar.add_cascade(label="Tools", menu=toolsmenu)
+
+setmenu = Menu(menubar, tearoff=0)
+setmenu.add_command(label="Faster Algorithm", state="disabled")
+setmenu.add_command(label="Advanced Algorithm", state="disabled")
+menubar.add_cascade(label="Settings", menu=setmenu)
 root.config(menu=menubar)
 
 root.bind("<Control-o>", button_add_menu)
+root.bind("<Control-l>", button_go_menu)
+
+
 
 root.mainloop()
