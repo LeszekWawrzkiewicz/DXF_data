@@ -1,4 +1,5 @@
 from tkinter import *
+from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 import time
 import math
@@ -12,6 +13,16 @@ line
 comment"""
 
 
+__version__ = 0.9
+
+current_state = None
+previous_state = None
+cached_num = None
+f_num = None
+ready_to_math = False
+ready_to_equal = False
+history = ""
+path_save = ""
 class CreateToolTip(object):
     """
     create a tooltip for a given widget
@@ -79,18 +90,35 @@ class CreateToolTip(object):
 
 
 
+def make_menu(w):
+    global the_menu
+    the_menu = Menu(w, tearoff=0)
+    the_menu.add_command(label="Cut")
+    the_menu.add_command(label="Copy")
+    the_menu.add_command(label="Paste")
 
+def show_menu(e):
+    w = e.widget
+    the_menu.entryconfigure("Cut",
+    command=lambda: w.event_generate("<<Cut>>"))
+    the_menu.entryconfigure("Copy",
+    command=lambda: w.event_generate("<<Copy>>"))
+    the_menu.entryconfigure("Paste",
+    command=lambda: w.event_generate("<<Paste>>"))
+    the_menu.tk.call("tk_popup", the_menu, e.x_root, e.y_root)
 
 
 root = Tk()
 root.iconbitmap('icon.ico')
 root.title('DXF Files Elevation Engine')
-
+make_menu(root)
 
 
 first_text_value = ["Enter-any-value"]
 second_text_value = ["Enter-any-value"]
 file_path = ""
+history_elev=""
+history_floor=""
 entry3_allowed = False
 entry4_allowed = False
 entry5_allowed = False
@@ -101,6 +129,45 @@ clicked2 = StringVar()
 clicked.set(first_text_value[0])
 clicked2.set(second_text_value[0])
 
+
+def shift_up(*args):
+    text_pre = e1.get()
+    e1.delete(0, END)
+    e1.insert(0, text_pre.upper())
+
+def shift_down(*args):
+    text_pre = e1.get()
+    e1.delete(0, END)
+    e1.insert(0, text_pre.lower())
+
+def shift_right(*args):
+    text_pre = e1.get()
+    e1.delete(0, END)
+    result = ""
+    for letter in text_pre:
+        result += letter.swapcase()
+    e1.insert(0, result)
+
+def shift_left(*args):
+    text_pre = e1.get()
+    result = ""
+    for letter in reversed(text_pre):
+        result += letter
+    e1.delete(0, END)
+    e1.insert(0, result)
+
+def upper_key_elev(*args):
+    global history_elev
+    if history_elev != "":
+        e1.delete(0, END)
+        e1.insert(0, history_elev)
+
+def upper_key_floor(*args):
+    global history_floor
+    if history_floor != "":
+        e2.delete(0, END)
+        e2.insert(0, history_floor)
+
 def button_add():
     global file_path
     global status_path
@@ -109,7 +176,7 @@ def button_add():
     if file_path != "":
         messagebox.showinfo("File path added successfully", "File path added successfully")
         button_add["state"] = "disabled"
-        filemenu.entryconfig(1, state="disabled")
+        filemenu.entryconfig(0, state="disabled")
         status_path.grid_forget()
         status_path = Label(status_frame, text="Ready to load!", fg="dark orange", anchor="center")
         status_path.grid(row=5, column=0, sticky=W+E+N+S)
@@ -179,12 +246,13 @@ def cancel3():
     else:
         file_path = ""
         button_add["state"] = "normal"
-        filemenu.entryconfig(1, state="normal")
+        filemenu.entryconfig(0, state="normal")
         status_path.grid_forget()
         status_path = Label(status_frame, text="Waiting to enter data", fg="dark orange", anchor="w", justify=CENTER)
         status_path.grid(row=5, column=0, sticky=W + E + N + S)
 
-def button_add_elev():
+def button_add_elev(*args):
+    global history_elev
     global first_text_value
     global ElevDrop
     global clicked
@@ -208,20 +276,26 @@ def button_add_elev():
         status_elev.grid_forget()
         status_elev = Label(status_frame, text="Ready to load!", anchor="center", fg="dark orange", justify=CENTER)
         status_elev.grid(row=1, column=0, sticky=W + E)
+        history_elev = add_elevation
+        e1.delete(0, END)
         messagebox.showinfo("Added first text value successfully", f"Added *{add_elevation}* successfully. You can add more than one value")
     elif first_text_value != ["Enter-any-value"] and good_to_go == True:
         first_text_value.append(add_elevation)
         ElevDrop.grid_forget()
         ElevDrop = OptionMenu(root, clicked, *first_text_value)
         ElevDrop.grid(row=1, column=1, sticky=W + E)
+        history_elev = add_elevation
+        e1.delete(0, END)
         messagebox.showinfo("Added first text value successfully",f"Added {add_elevation} successfully. You can add more values")
 
 
-def button_add_floor():
+def button_add_floor(*args):
+    global history_floor
     global second_text_value
     global FlorDrop
     global clicked2
     global status_floor
+
     add_floor = e2.get()
     good_to_go = False
     if add_floor != "":
@@ -241,6 +315,8 @@ def button_add_floor():
         status_floor.grid_forget()
         status_floor = Label(status_frame, text="Ready to load!", anchor="center", fg="dark orange", justify=CENTER)
         status_floor.grid(row=3, column=0, sticky=W+E)
+        history_floor = add_floor
+        e2.delete(0, END)
         messagebox.showinfo("Added second text value successfully",
                             f"Added *{add_floor}* successfully. You can add more than one value")
     elif second_text_value != ["Enter-any-value"] and good_to_go == True:
@@ -248,6 +324,8 @@ def button_add_floor():
         FlorDrop.grid_forget()
         FlorDrop = OptionMenu(root, clicked2, *second_text_value)
         FlorDrop.grid(row=4, column=1, sticky=W + E)
+        history_floor = add_floor
+        e2.delete(0, END)
         messagebox.showinfo("Added second text value successfully",
                             f"Added {add_floor} successfully. You can add more values")
 
@@ -459,52 +537,616 @@ def button_start():
     sorted_main_elevation_temp_data = sorted(main_elevation_temp_data, key=itemgetter("X"), reverse=False)
     '''create a list of data: frame, elevation, level'''
     for i in temp_global_list:
-        temp_frame_elevation_level = {}
+        temp_frame_elevation_level = []
         i['elev'] = X_elev_dict_obj[i['C_X']]
         Y_temp = int(i['C_Y'])
         temp_data = []
         temp_data = {abs(k - Y_temp): v for k, v in level_temp_data.items()}
         temp_lambda = lambda temp_data: min(temp_data.items())
         i['level'] = temp_lambda(temp_data)[1].replace("{", "").replace("}", "")
-        temp_frame_elevation_level['name'] = i['name']
-        temp_frame_elevation_level['elev'] = sorted_main_elevation_temp_data[i['elev'] - 1]['elev'].replace("{",
-                                                                                                            "").replace(
-            "}", "")
-        temp_frame_elevation_level['level'] = i['level']
+        temp_frame_elevation_level.append(i['name'])
+        temp_frame_elevation_level.append(
+            sorted_main_elevation_temp_data[i['elev'] - 1]['elev'].replace("{", "").replace("}", ""))
+        temp_frame_elevation_level.append(i['level'])
         frame_elevation_level.append(temp_frame_elevation_level)
+    con = sqlite3.connect('dxf.db')
+    with con:
+        cur = con.cursor()
+        cur.executemany("INSERT INTO dxf (name, elevation, level) VALUES(?, ?, ?)", frame_elevation_level)
+        con.commit()
 
-    for i in frame_elevation_level:
-        connection = sqlite3.connect("dxf.db")
-        cursor = connection.cursor()
-        #name, elevation, level
-        query = "INSERT INTO dxf (name, elevation, level) values (?, ?, ?)"
-        cursor.execute(query, (i['name'], i['elev'], i['level']))
-        connection.commit()
+    with con:
+        cur = con.cursor()
+        cur.execute("SELECT * FROM dxf")
+        rows = cur.fetchall()
+        number_of_rows = 0
+        for _ in rows:
+            number_of_rows+=1
+
     end = time.time()
-    number = cursor.execute("SELECT COUNT(*) from dxf")
-    row = number.fetchone()
-    connection.close()
     messagebox.showinfo("Operation run successfully", f"Operation run successfully in {int(end-start)} seconds")
-    messagebox.showinfo("Number of rows in DB", f"There are {number} rows in your database")
+    messagebox.showinfo("Number of rows in DB", f"There are {number_of_rows} rows in your database")
+    openNewWindow()
 
 def openNewWindow():
-    # Toplevel object which will
-    # be treated as a new window
+
+
+    """SQL SELECTS - WRITING DATA TO PYTHON VARIABLES"""
+    elevations = []
+    elevations_floors = {}
+    blocks = []
+    blocks_numbers = {}
+    floors = []
+    floors_numbers = {}
+    con = sqlite3.connect('dxf.db')
+    with con:
+        cur = con.cursor()
+        cur.execute("SELECT * FROM dxf")
+        rows = cur.fetchall()
+        for elev in rows:
+            if elev[2] not in elevations:
+                elevations.append(elev[2])
+
+    for elevation in elevations:
+        floors = []
+        with con:
+            cur = con.cursor()
+            query = "SELECT * FROM dxf where elevation=?"
+            cur.execute(query, (elevation,))
+            rows = cur.fetchall()
+            for row in rows:
+                if row[3] not in floors:
+                    floors.append(row[3])
+        elevations_floors[elevation] = floors
+
+    with con:
+        cur = con.cursor()
+        cur.execute("SELECT * FROM dxf")
+        rows = cur.fetchall()
+        for block in rows:
+            if block[1] not in blocks:
+                blocks.append(block[1])
+
+    for block in blocks:
+        count = 0
+        with con:
+            cur = con.cursor()
+            query = "SELECT * FROM dxf where name=?"
+            cur.execute(query, (block,))
+            rows = cur.fetchall()
+            for row in rows:
+                count += 1
+        blocks_numbers[block] = count
+
+    with con:
+        cur = con.cursor()
+        cur.execute("SELECT * FROM dxf")
+        rows = cur.fetchall()
+        for floor in rows:
+            if floor[3] not in floors:
+                floors.append(floor[3])
+
+    for floor in floors:
+        count = 0
+        with con:
+            cur = con.cursor()
+            query = "SELECT * FROM dxf where level=?"
+            cur.execute(query, (floor,))
+            rows = cur.fetchall()
+            for _ in rows:
+                count += 1
+        floors_numbers[floor] = count
+
+    test_mode = True
+    if test_mode == True:
+        print(blocks)
+        print(blocks_numbers)
+        print("*" * 40)
+        print(elevations)
+        print(elevations_floors)
+        print("*" * 40)
+        print(floors)
+        print(floors_numbers)
+
+    """TKINTER - MAKE MENU FOR ENTRIES"""
+
+    def make_menu(w):
+        global the_menu
+        the_menu = Menu(w, tearoff=0)
+        the_menu.add_command(label="Cut")
+        the_menu.add_command(label="Copy")
+
+    def show_menu(e):
+        w = e.widget
+        the_menu.entryconfigure("Cut",
+                                command=lambda: w.event_generate("<<Cut>>"))
+        the_menu.entryconfigure("Copy",
+                                command=lambda: w.event_generate("<<Copy>>"))
+        the_menu.tk.call("tk_popup", the_menu, e.x_root, e.y_root)
+
+    """TKINTER - RAPORT FROM THE DATABASE"""
+
     newWindow = Toplevel(root)
+    newWindow.title('DXF Files Elevation Engine Raport')
+    make_menu(newWindow)
 
-    # sets the title of the
-    # Toplevel widget
-    newWindow.title("New Window")
+    """TKINTER VARS TO DROPDOWN MENUS"""
+    blocks_var = StringVar()
+    elev_var = StringVar()
+    floor_var = StringVar()
+    blocks_var.set(list(blocks_numbers.keys())[0])
+    elev_var.set(list(elevations_floors.keys())[0])
+    floor_var.set(list(floors_numbers.keys())[0])
 
-    # sets the geometry of toplevel
-    newWindow.geometry("200x200")
+    status_frame = Frame(newWindow, relief='sunken', bd=1)
+    ee1 = Entry(status_frame)
+    ee2 = Entry(status_frame)
+    ee3 = Entry(status_frame)
 
-    # A Label widget to show in toplevel
-    Label(newWindow,
-          text="This is a new window").pack()
+    def show_blocks(*args):
+        ee1.delete(0, END)
+        insertion = blocks_numbers[blocks_var.get()]
+        ee1.insert(0, insertion)
+        statusLabel4["text"] = f"Number of {blocks_var.get()} occurrences:  "
+
+    def show_elev(*args):
+        ee2.delete(0, END)
+        count = 0
+        for _ in elevations_floors[elev_var.get()]:
+            count += 1
+        insertion = count
+        ee2.insert(0, insertion)
+        statusLabel5["text"] = f"Number of {elev_var.get()} occurrences:  "
+
+    def show_floor(*args):
+        ee3.delete(0, END)
+        insertion = floors_numbers[floor_var.get()]
+        ee3.insert(0, insertion)
+        statusLabel6["text"] = f"Number of {floor_var.get()} occurrences:  "
+
+    def save(*args):
+        file1 = askopenfilename(filetypes=[("TXT files", "*.txt")])
+        file_path1 = file1
+        if file_path1 != "":
+            messagebox.showinfo("Saving your report!", "File found. Saving your report!")
+            f = open(file_path1, "a")
+            f.write("Your report from DXF Files Elevation Engine \n")
+            f.write(f"Number of blocks: {len(blocks)}  \n")
+            f.write(f"Your blocks: {blocks} \n")
+            f.write("Number of occurrences of each block: \n")
+            for bl in blocks_numbers.keys():
+                msg = " "
+                msg+= str(bl)
+                msg+= ": "
+                msg+= str(blocks_numbers[bl])
+                f.write(f"{msg} \n")
+            f.close()
+            messagebox.showinfo("Report saved!", f"Report saved in {file_path}")
+
+        else:
+            messagebox.showwarning("You must add your TXT file!", "You must add your TXT file"
+                                                                  "to save the report!")
+
+
+    myLabel1 = Label(newWindow, text="YOUR STATUS REPORT:", anchor="w", justify=CENTER, font="-weight bold")
+    myLabel1.grid(row=0, column=0, columnspan=10)
+
+    status_frame.grid(row=1, column=0, rowspan=5, columnspan=5, sticky=W + E + N + S)
+    statusLabel1 = Label(status_frame, text="Blocks:", anchor="w", justify=LEFT)
+    statusLabel1.grid(row=0, column=0, sticky=W)
+    statusLabel2 = Label(status_frame, text="Elevations:", anchor="w", justify=LEFT)
+    statusLabel2.grid(row=1, column=0, sticky=W)
+    statusLabel3 = Label(status_frame, text="Floors:", anchor="w", justify=LEFT)
+    statusLabel3.grid(row=2, column=0, sticky=W)
+    separetor1 = ttk.Separator(status_frame, orient=VERTICAL)
+    separetor1.grid(column=1, row=0, rowspan=3, sticky='ns')
+    BlocksDrop = OptionMenu(status_frame, blocks_var, *blocks_numbers.keys(), command=show_blocks)
+    BlocksDrop.grid(row=0, column=2, sticky=W + E + N + S, padx=0)
+    ElevationDrop = OptionMenu(status_frame, elev_var, *elevations_floors.keys(), command=show_elev)
+    ElevationDrop.grid(row=1, column=2, sticky=W + E + N + S, padx=0)
+    FloorsDrop = OptionMenu(status_frame, floor_var, *floors_numbers.keys(), command=show_floor)
+    FloorsDrop.grid(row=2, column=2, sticky=W + E + N + S, padx=0)
+    separetor2 = ttk.Separator(status_frame, orient=VERTICAL)
+    separetor2.grid(column=3, row=0, rowspan=3, sticky='ns')
+    statusLabel4 = Label(status_frame, text=f"Number of {blocks_var.get()} occurrences:", anchor="w", justify=LEFT)
+    statusLabel4.grid(row=0, column=4, sticky=W)
+    statusLabel5 = Label(status_frame, text=f"Floors of {elev_var.get()}:", anchor="w", justify=LEFT)
+    statusLabel5.grid(row=1, column=4, sticky=W)
+    statusLabel6 = Label(status_frame, text=f"Number of {floor_var.get()} occurrences:  ", anchor="w", justify=LEFT)
+    statusLabel6.grid(row=2, column=4, sticky=W)
+    separetor3 = ttk.Separator(status_frame, orient=VERTICAL)
+    separetor3.grid(column=5, row=0, rowspan=5, sticky='ns')
+
+    ee1.grid(row=0, column=6)
+    ee2.grid(row=1, column=6)
+    ee3.grid(row=2, column=6)
+    ee1.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
+    ee2.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
+    ee3.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
+    button_save = Button(newWindow, text='SAVE!', command=save)
+    button_save.grid(row=6, column=0, columnspan=5, sticky=W + E)
+
+    """FUNCTIONS"""
+
+    show_floor()
+    show_elev()
+    show_blocks()
+
+    menubar = Menu(newWindow)
+    filemenu = Menu(menubar, tearoff=0)
+    filemenu.add_command(label="SAVE", state='disabled')
+    filemenu.add_separator()
+    filemenu.add_command(label="Exit All", command=newWindow.quit)
+    menubar.add_cascade(label="File", menu=filemenu)
+
+    helpmenu = Menu(menubar, tearoff=0)
+    helpmenu.add_command(label="Deactivate tips", state='normal')
+    helpmenu.add_command(label="Activate tips", state='disabled')
+    helpmenu.add_separator()
+    helpmenu.add_command(label="Version", command=show_version)
+    menubar.add_cascade(label="Help", menu=helpmenu)
+
+    toolsmenu = Menu(menubar, tearoff=0)
+    toolsmenu.add_command(label="Calculator")
+    toolsmenu.add_command(label="CM/IN Converter")
+    menubar.add_cascade(label="Tools", menu=toolsmenu)
+    newWindow.config(menu=menubar)
+    newWindow.bind("<Control-s>", save)
+
 
 def calculator():
-    import calculator
+    calcWindow = Toplevel(root)
+    calcWindow.title('Simple Calculator')
+    calcWindow.iconbitmap(r'calc.ico')
+
+    operation = Entry(calcWindow, width=35, borderwidth=5)
+    operation.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
+    e = Entry(calcWindow, width=35, borderwidth=5)
+    e.grid(row=1, column=0, columnspan=3, padx=10, pady=10)
+
+
+
+    def button_float():
+        current = e.get()
+        if len(current) == 0:
+            e.delete(0, END)
+            e.insert(0, str(current))
+        elif "." in current:
+            e.delete(0, END)
+            e.insert(0, str(current))
+        else:
+            e.delete(0, END)
+            e.insert(0, str(current) + str("."))
+
+    def button_click(number):
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+        previous_state = current_state
+
+        current_state = 'click'
+
+        if previous_state in ['add', 'sub', 'mul', 'div'] and ready_to_equal == False:
+            ready_to_equal = True
+            button_equal['state'] = 'normal'
+
+        current = e.get()
+        e.delete(0, END)
+        e.insert(0, str(current) + str(number))
+
+        if current_state == 'click':
+            if ready_to_math == False:
+                button_add['state'] = 'normal'
+                button_subtract['state'] = 'normal'
+                button_divide['state'] = 'normal'
+                button_multiply['state'] = 'normal'
+            button_clear['state'] = 'normal'
+
+    def button_clear():
+        global current_state
+        global previous_state
+        global ready_to_math
+        global ready_to_equal
+        global cached_num
+        global f_num
+        global history
+        previous_state = current_state
+
+        current_state = 'clear'
+
+        e.delete(0, END)
+        ready_to_equal = False
+        ready_to_math = False
+        cached_num = None
+        f_num = None
+        history = ""
+
+        operation.delete(0, END)
+
+        button_equal['state'] = 'disabled'
+        button_add['state'] = 'disabled'
+        button_subtract['state'] = 'disabled'
+        button_divide['state'] = 'disabled'
+        button_multiply['state'] = 'disabled'
+
+    def button_add():
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+
+        if ready_to_equal == True:
+            ready_to_equal = False
+            button_equal['state'] = 'disabled'
+
+        if ready_to_math == False:
+            ready_to_math = True
+            button_add['state'] = 'disabled'
+            button_subtract['state'] = 'disabled'
+            button_divide['state'] = 'disabled'
+            button_multiply['state'] = 'disabled'
+
+        previous_state = current_state
+
+        current_state = 'add'
+
+        first_number = e.get()
+        global f_num
+        global math
+        math = 'addition'
+
+        f_num = float(first_number)
+        e.delete(0, END)
+
+        global history
+        if previous_state != 'equal':
+            history += str(f_num) + " + "
+            operation.delete(0, END)
+            operation.insert(0, history)
+        if previous_state == 'equal':
+            history += " + "
+            operation.delete(0, END)
+            operation.insert(0, history)
+
+    def button_subtract():
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+
+        if ready_to_equal == True:
+            ready_to_equal = False
+            button_equal['state'] = 'disabled'
+
+        if ready_to_math == False:
+            ready_to_math = True
+            button_add['state'] = 'disabled'
+            button_subtract['state'] = 'disabled'
+            button_divide['state'] = 'disabled'
+            button_multiply['state'] = 'disabled'
+
+        previous_state = current_state
+
+        current_state = 'sub'
+
+        first_number = e.get()
+        global f_num
+        global math
+        math = 'subtraction'
+
+        f_num = float(first_number)
+        e.delete(0, END)
+
+        global history
+        if previous_state != 'equal':
+            history += str(f_num) + " - "
+            operation.delete(0, END)
+            operation.insert(0, history)
+        if previous_state == 'equal':
+            history += " - "
+            operation.delete(0, END)
+            operation.insert(0, history)
+
+    def button_multiply():
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+
+        if ready_to_equal == True:
+            ready_to_equal = False
+            button_equal['state'] = 'disabled'
+
+        if ready_to_math == False:
+            ready_to_math = True
+            button_add['state'] = 'disabled'
+            button_subtract['state'] = 'disabled'
+            button_divide['state'] = 'disabled'
+            button_multiply['state'] = 'disabled'
+
+        previous_state = current_state
+
+        current_state = 'mul'
+
+        first_number = e.get()
+        global f_num
+        global math
+        math = 'multiplication'
+
+        f_num = float(first_number)
+        e.delete(0, END)
+
+        global history
+        if previous_state != 'equal':
+            history += str(f_num) + " x "
+            operation.delete(0, END)
+            operation.insert(0, history)
+        if previous_state == 'equal':
+            history += " x "
+            operation.delete(0, END)
+            operation.insert(0, history)
+
+    def button_divide():
+        global current_state
+        global previous_state
+        global ready_to_equal
+        global ready_to_math
+
+        if ready_to_equal == True:
+            ready_to_equal = False
+            button_equal['state'] = 'disabled'
+
+        if ready_to_math == False:
+            ready_to_math = True
+            button_add['state'] = 'disabled'
+            button_subtract['state'] = 'disabled'
+            button_divide['state'] = 'disabled'
+            button_multiply['state'] = 'disabled'
+
+        previous_state = current_state
+
+        current_state = 'div'
+
+        first_number = e.get()
+        global f_num
+        global math
+        math = 'division'
+
+        f_num = float(first_number)
+        e.delete(0, END)
+
+        global history
+        if previous_state != 'equal':
+            history += str(f_num) + " / "
+            operation.delete(0, END)
+            operation.insert(0, history)
+        if previous_state == 'equal':
+            history += " / "
+            operation.delete(0, END)
+            operation.insert(0, history)
+
+    def button_equal():
+        global current_state
+        global previous_state
+        global cached_num
+        global f_num
+        global ready_to_math
+        global history
+
+        ready_to_math = False
+        button_add['state'] = 'normal'
+        button_subtract['state'] = 'normal'
+        button_divide['state'] = 'normal'
+        button_multiply['state'] = 'normal'
+
+        if current_state != 'equal':
+            previous_state = current_state
+
+            current_state = 'equal'
+
+            second_number = e.get()
+            cached_num = float(second_number)
+            e.delete(0, END)
+
+            if math == 'addition':
+                history += str(second_number)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, f_num + float(second_number))
+                f_num += float(second_number)
+            elif math == 'subtraction':
+                history += str(second_number)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) - float(second_number))
+                f_num -= float(second_number)
+            elif math == 'multiplication':
+                history += str(second_number)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) * float(second_number))
+                f_num *= float(second_number)
+            elif math == 'division':
+                history += str(second_number)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) / float(second_number))
+                f_num /= float(second_number)
+
+
+
+        elif current_state == 'equal':
+            previous_state = current_state
+
+            e.delete(0, END)
+
+            if math == 'addition':
+                history += " + " + str(cached_num)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, f_num + float(cached_num))
+                f_num += float(cached_num)
+            elif math == 'subtraction':
+                history += " - " + str(cached_num)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) - float(cached_num))
+                f_num -= float(cached_num)
+            elif math == 'multiplication':
+                history += " x " + str(cached_num)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) * float(cached_num))
+                f_num *= float(cached_num)
+            elif math == 'division':
+                history += " / " + str(cached_num)
+                operation.delete(0, END)
+                operation.insert(0, history)
+                e.insert(0, float(f_num) / float(cached_num))
+                f_num /= float(cached_num)
+
+    button_1 = Button(calcWindow, text='1', padx=40, pady=20, command=lambda: button_click(1))
+    button_2 = Button(calcWindow, text='2', padx=40, pady=20, command=lambda: button_click(2))
+    button_3 = Button(calcWindow, text='3', padx=40, pady=20, command=lambda: button_click(3))
+    button_4 = Button(calcWindow, text='4', padx=40, pady=20, command=lambda: button_click(4))
+    button_5 = Button(calcWindow, text='5', padx=40, pady=20, command=lambda: button_click(5))
+    button_6 = Button(calcWindow, text='6', padx=40, pady=20, command=lambda: button_click(6))
+    button_7 = Button(calcWindow, text='7', padx=40, pady=20, command=lambda: button_click(7))
+    button_8 = Button(calcWindow, text='8', padx=40, pady=20, command=lambda: button_click(8))
+    button_9 = Button(calcWindow, text='9', padx=40, pady=20, command=lambda: button_click(9))
+    button_0 = Button(calcWindow, text='0', padx=40, pady=20, command=lambda: button_click(0))
+    button_add = Button(calcWindow, text='+', padx=39, pady=20, command=button_add, state=DISABLED)
+    button_equal = Button(calcWindow, text='=', padx=40, pady=20, command=button_equal, state=DISABLED)
+    button_clear = Button(calcWindow, text='Clear', padx=79, pady=20, command=button_clear, state=DISABLED)
+
+    button_subtract = Button(calcWindow, text='-', padx=41, pady=20, command=button_subtract, state=DISABLED)
+    button_multiply = Button(calcWindow, text='x', padx=40, pady=20, command=button_multiply, state=DISABLED)
+    button_divide = Button(calcWindow, text='/', padx=41, pady=20, command=button_divide, state=DISABLED)
+
+    button_1.grid(row=4, column=0, )
+    button_2.grid(row=4, column=1, )
+    button_3.grid(row=4, column=2, )
+
+    button_4.grid(row=3, column=0, )
+    button_5.grid(row=3, column=1, )
+    button_6.grid(row=3, column=2, )
+
+    button_7.grid(row=2, column=0, )
+    button_8.grid(row=2, column=1, )
+    button_9.grid(row=2, column=2, )
+
+    button_0.grid(row=5, column=0)
+    button_float = Button(calcWindow, text='.', padx=40, pady=20, command=button_float)
+
+    button_clear.grid(row=5, column=1, columnspan=2)
+    button_add.grid(row=6, column=0)
+    button_equal.grid(row=6, column=1)
+    button_float.grid(row=6, column=2)
+
+    button_subtract.grid(row=7, column=0)
+    button_multiply.grid(row=7, column=1)
+    button_divide.grid(row=7, column=2)
 
 def cm_in_converter():
     import cm_in_converter
@@ -535,6 +1177,13 @@ button_cancel3 = Button(root, text='CANCEL', command=cancel3)
 
 myLabel1.grid(row=0, column=0, sticky=W+E)
 e1.grid(row=1, column=0)
+e1.bind("<Return>", button_add_elev)
+e1.bind("<Control-Up>", shift_up)
+e1.bind("<Control-Down>", shift_down)
+e1.bind("<Control-Right>", shift_right)
+e1.bind("<Control-Left>", shift_left)
+e1.bind("<Up>", upper_key_elev)
+e1.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
 myLabel2.grid(row=3, column=0, sticky=W+E+N+S)
 ElevDrop = OptionMenu(root, clicked, *first_text_value)
 ElevDrop.grid(row=1, column=1, sticky=W+E+N+S, padx=0)
@@ -545,6 +1194,9 @@ button_add_elev.grid(row=2, column=0, columnspan=2, sticky=W+E, padx=2)
 button_add_flor = Button(root, text='Add second text values', command=button_add_floor)
 button_add_flor.grid(row=5, column=0, columnspan=2, sticky=W+E, padx=2)
 e2.grid(row=4, column=0, sticky=W+E+N+S)
+e2.bind("<Return>", button_add_floor)
+e2.bind("<Up>", upper_key_floor)
+e2.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
 myLabel3.grid(row=6, column=0, sticky=W+E)
 button_add.grid(row=7, column=0, sticky=W+E)
 
@@ -602,7 +1254,7 @@ def help_on():
     e1_ttp.rebind()
     e2_ttp.rebind()
 
-def button_add_menu():
+def button_add_menu(*args):
     global file_path
     global status_path
     file = askopenfilename(filetypes=[("DXF files", "*.dxf")])
@@ -610,14 +1262,14 @@ def button_add_menu():
     if file_path != "":
         messagebox.showinfo("File path added successfully", "File path added successfully")
         button_add["state"] = "disabled"
-        filemenu.entryconfig(1, state="disabled")
+        filemenu.entryconfig(0, state="disabled")
         status_path.grid_forget()
         status_path = Label(status_frame, text="Ready to load!", fg="dark orange", anchor="center")
         status_path.grid(row=5, column=0, sticky=W+E+N+S)
     else:
         messagebox.showwarning("You must add your DXF file!", "You must add your DXF file!")
 
-def button_go_menu():
+def button_go_menu(*args):
     global first_text_value
     global second_text_value
     global file_path
@@ -662,17 +1314,21 @@ def button_go_menu():
         status_head = Label(root, text="All data loaded!", fg="green", anchor="center", justify=CENTER, borderwidth=1, relief='sunken')
         status_head.grid(row=7, column=2, columnspan=2, sticky=W+E+N+S)
         button_go["state"] = "disabled"
-        filemenu.entryconfig(2, state="disabled")
+        filemenu.entryconfig(1, state="disabled")
         button_cancel1["state"] = "disabled"
         button_cancel2["state"] = "disabled"
         button_cancel3["state"] = "disabled"
 
+
+def show_version():
+    messagebox.showinfo(f"Currently working on version {__version__}!", f"You are currently working on"
+                                                                        f" version {__version__} of your"
+                                                                        f" DXF Files Elevation Engine!")
+
 menubar = Menu(root)
 filemenu = Menu(menubar, tearoff=0)
-filemenu.add_command(label="New", command=openNewWindow)
 filemenu.add_command(label="Open DXF file", command=button_add_menu)
 filemenu.add_command(label="LOAD!", command=button_go_menu)
-filemenu.add_command(label="START!", command=button_start, state='disabled')
 filemenu.add_separator()
 filemenu.add_command(label="Exit", command=root.quit)
 menubar.add_cascade(label="File", menu=filemenu)
@@ -680,13 +1336,23 @@ menubar.add_cascade(label="File", menu=filemenu)
 helpmenu = Menu(menubar, tearoff=0)
 helpmenu.add_command(label="Deactivate tips", state='normal', command=help_off)
 helpmenu.add_command(label="Activate tips", state='disabled', command=help_on)
+helpmenu.add_separator()
+helpmenu.add_command(label="Version", command=show_version)
 menubar.add_cascade(label="Help", menu=helpmenu)
 
 toolsmenu = Menu(menubar, tearoff=0)
 toolsmenu.add_command(label="Calculator", command=calculator)
 toolsmenu.add_command(label="CM/IN Converter", command=cm_in_converter)
 menubar.add_cascade(label="Tools", menu=toolsmenu)
+
+setmenu = Menu(menubar, tearoff=0)
+setmenu.add_command(label="Faster Algorithm", state="disabled")
+setmenu.add_command(label="Advanced Algorithm", state="disabled")
+menubar.add_cascade(label="Settings", menu=setmenu)
 root.config(menu=menubar)
+
+root.bind("<Control-o>", button_add_menu)
+root.bind("<Control-l>", button_go_menu)
 
 
 
