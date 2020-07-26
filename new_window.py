@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter.filedialog import askopenfilename
 from tkinter import messagebox
+from tkinter import ttk
 import sqlite3
 
 """SQL SELECTS - WRITING DATA TO PYTHON VARIABLES"""
@@ -83,15 +84,106 @@ if test_mode == True:
     print(floors)
     print(floors_numbers)
 
+"""TKINTER - MAKE MENU FOR ENTRIES"""
+def make_menu(w):
+    global the_menu
+    the_menu = Menu(w, tearoff=0)
+    the_menu.add_command(label="Cut")
+    the_menu.add_command(label="Copy")
+
+
+def show_menu(e):
+    w = e.widget
+    the_menu.entryconfigure("Cut",
+    command=lambda: w.event_generate("<<Cut>>"))
+    the_menu.entryconfigure("Copy",
+    command=lambda: w.event_generate("<<Copy>>"))
+    the_menu.tk.call("tk_popup", the_menu, e.x_root, e.y_root)
+
 """TKINTER - RAPORT FROM THE DATABASE"""
+
+
+
+
 
 root = Tk()
 root.iconbitmap('icon.ico')
 root.title('DXF Files Elevation Engine Raport')
+make_menu(root)
 
-myLabel1 = Label(root, text="YOUR STATUS RAPORT:", anchor="w",justify=LEFT, font="-weight bold")
-myLabel1.grid(row=0, column=0)
+
+"""TKINTER VARS TO DROPDOWN MENUS"""
+blocks_var = StringVar()
+elev_var = StringVar()
+floor_var = StringVar()
+blocks_var.set(list(blocks_numbers.keys())[0])
+elev_var.set(list(elevations_floors.keys())[0])
+floor_var.set(list(floors_numbers.keys())[0])
+
 status_frame = Frame(root, relief='sunken', bd=1)
-status_frame.grid(row=0, column=1, sticky=W+E+N+S)
+ee1 = Entry(status_frame)
+ee2 = Entry(status_frame)
+ee3 = Entry(status_frame)
 
+def show_blocks(*args):
+    ee1.delete(0, END)
+    insertion = blocks_numbers[blocks_var.get()]
+    ee1.insert(0, insertion )
+
+def show_elev(*args):
+    ee2.delete(0, END)
+    count = 0
+    for _ in elevations_floors[elev_var.get()]:
+        count +=1
+    insertion = count
+    ee2.insert(0, insertion )
+
+def show_floor(*args):
+    ee3.delete(0, END)
+    insertion = floors_numbers[floor_var.get()]
+    ee3.insert(0, insertion )
+
+
+myLabel1 = Label(root, text="YOUR STATUS RAPORT:", anchor="w",justify=CENTER, font="-weight bold")
+myLabel1.grid(row=0, column=0, columnspan=10)
+
+status_frame.grid(row=1, column=0, rowspan=5, columnspan=5, sticky=W+E+N+S)
+statusLabel1 = Label(status_frame, text="Blocks:", anchor="w",justify=LEFT)
+statusLabel1.grid(row=0, column=0, sticky=W)
+statusLabel2 = Label(status_frame, text="Elevations:", anchor="w",justify=LEFT)
+statusLabel2.grid(row=1, column=0, sticky=W)
+statusLabel3 = Label(status_frame, text="Floors:", anchor="w",justify=LEFT)
+statusLabel3.grid(row=2, column=0,  sticky=W)
+separetor1 = ttk.Separator(status_frame, orient=VERTICAL)
+separetor1.grid(column=1, row=0, rowspan=3, sticky='ns')
+BlocksDrop = OptionMenu(status_frame, blocks_var, *blocks_numbers.keys(), command=show_blocks)
+BlocksDrop.grid(row=0, column=2, sticky=W+E+N+S, padx=0)
+ElevationDrop = OptionMenu(status_frame, elev_var, *elevations_floors.keys(), command=show_elev)
+ElevationDrop.grid(row=1, column=2, sticky=W+E+N+S, padx=0)
+FloorsDrop = OptionMenu(status_frame, floor_var, *floors_numbers.keys(), command=show_floor)
+FloorsDrop.grid(row=2, column=2, sticky=W+E+N+S, padx=0)
+separetor2 = ttk.Separator(status_frame, orient=VERTICAL)
+separetor2.grid(column=3, row=0, rowspan=3, sticky='ns')
+statusLabel4 = Label(status_frame, text=f"Number of {blocks_var.get()} occurrences:", anchor="w",justify=LEFT)
+statusLabel4.grid(row=0, column=4, sticky=W)
+statusLabel5 = Label(status_frame, text=f"Floors of {elev_var.get()}:", anchor="w",justify=LEFT)
+statusLabel5.grid(row=1, column=4, sticky=W)
+statusLabel6 = Label(status_frame, text=f"Number of {floor_var.get()} occurrences:  ", anchor="w",justify=LEFT)
+statusLabel6.grid(row=2, column=4,  sticky=W)
+separetor3 = ttk.Separator(status_frame, orient=VERTICAL)
+separetor3.grid(column=5, row=0, rowspan=5, sticky='ns')
+
+ee1.grid(row=0, column=6)
+ee2.grid(row=1, column=6)
+ee3.grid(row=2, column=6)
+ee1.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
+ee2.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
+ee3.bind_class("Entry", "<Button-3><ButtonRelease-3>", show_menu)
+
+"""FUNCTIONS"""
+
+
+show_floor()
+show_elev()
+show_blocks()
 root.mainloop()
